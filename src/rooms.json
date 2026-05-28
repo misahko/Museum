@@ -1,0 +1,149 @@
+{
+  "rooms": [
+    {
+      "id": "entrance",
+      "model": "/ReplaceT.glb",
+      "spawn": [0, 1, 2],
+      "replacements": [
+        { "name": "Icosphere", "model": "/R2.glb" }
+      ],
+      "portals": [
+        { "targetRoom": "main-hall", "label": "Main Hall →", "position": [2, 1.5, 0] }
+      ],
+      "exhibits": [
+        {
+          "title": "AI Research Museum",
+          "body": "Explore landmark papers that shaped modern AI.\nWASD to walk · Click portals to enter rooms.",
+          "position": [0, 1.8, -1]
+        },
+        {
+          "displayType": "hologram",
+          "image": "/190253-1.jpg",
+          "title": "Exhibit Preview",
+          "position": [-1.5, 2.2, 0],
+          "rotation": [0, 0.5, 0]
+        }
+      ]
+    },
+    {
+      "id": "main-hall",
+      "wallColor": "#222235",
+      "accentColor": "#5a4a9a",
+      "spawn": [0, 1, 4],
+      "portals": [
+        { "targetRoom": "entrance", "label": "← Entrance",  "position": [ 4.5, 1.5, 0] },
+        { "targetRoom": "gallery",  "label": "Gallery →",   "position": [-4.5, 1.5, 0] }
+      ],
+      "exhibits": [
+        {
+          "title": "Attention Is All You Need",
+          "body": "Vaswani et al., 2017 · Google Brain\n\nThe Transformer — self-attention only, no recurrence. Every major language model today descends from this architecture.",
+          "position": [-3.5, 1.8, -5.9]
+        },
+        {
+          "title": "BERT",
+          "body": "Devlin et al., 2018 · Google AI\n\nBidirectional pre-training on masked language modeling. State-of-the-art across 11 NLP benchmarks upon release.",
+          "position": [0, 1.8, -5.9]
+        },
+        {
+          "title": "GPT-3",
+          "body": "Brown et al., 2020 · OpenAI\n\n175B parameters. Few-shot learning across math, code, and translation — with zero gradient updates at inference.",
+          "position": [3.5, 1.8, -5.9]
+        },
+        {
+          "title": "ResNet",
+          "body": "He et al., 2015 · Microsoft Research\n\nSkip connections made 100–1000 layer networks trainable. Won ILSVRC 2015 — 3.57% top-5 error, below human level.",
+          "position": [-5.9, 1.8, 0],
+          "rotation": [0, 1.5708, 0]
+        },
+        {
+          "title": "AlexNet",
+          "body": "Krizhevsky et al., 2012\n\nFirst deep CNN to win ImageNet. Cut top-5 error from 26% to 15.3% using ReLU, dropout, and GPU training.",
+          "position": [5.9, 1.8, 0],
+          "rotation": [0, -1.5708, 0]
+        },
+        {
+          "displayType": "hologram",
+          "image": "/190253-1.jpg",
+          "title": "Research Visualization",
+          "position": [-2, 2.4, -2]
+        },
+        {
+          "displayType": "stand",
+          "standModel": "/R2.glb",
+          "standHeight": 1.2,
+          "image": "/190253-1.jpg",
+          "title": "Figure 1",
+          "position": [2, 0, -2]
+        },
+        {
+          "displayType": "stand",
+          "standModel": "/R2.glb",
+          "standHeight": 1.2,
+          "title": "Transformer Architecture",
+          "body": "Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions.",
+          "position": [-2, 0, -2]
+        }
+      ]
+    },
+    {
+      "id": "gallery",
+      "wallColor": "#22302a",
+      "accentColor": "#3a7a5a",
+      "spawn": [0, 1, 4],
+      "portals": [
+        { "targetRoom": "main-hall", "label": "← Main Hall", "position": [4.5, 1.5, 0] }
+      ],
+      "exhibits": [
+        {
+          "title": "AlphaFold 2",
+          "body": "Jumper et al., 2021 · DeepMind\n\nSolved the 50-year protein folding problem using an Evoformer attention architecture trained on the Protein Data Bank.",
+          "position": [-3, 1.8, -5.9]
+        },
+        {
+          "title": "CLIP",
+          "body": "Radford et al., 2021 · OpenAI\n\nContrastive Language-Image Pre-training on 400M pairs. Enables zero-shot image classification for any category.",
+          "position": [0, 1.8, -5.9]
+        },
+        {
+          "title": "Latent Diffusion",
+          "body": "Rombach et al., 2022\n\nDiffusion in compressed latent space — orders of magnitude cheaper than pixel-space diffusion. The backbone of Stable Diffusion.",
+          "position": [3, 1.8, -5.9]
+        },
+        {
+          "title": "NeRF",
+          "body": "Mildenhall et al., 2020 · UC Berkeley\n\nNeural Radiance Fields: a continuous 5D scene function. Photo-realistic novel view synthesis from sparse 2D images.",
+          "position": [-5.9, 1.8, 0],
+          "rotation": [0, 1.5708, 0]
+        },
+        {
+          "title": "RLHF",
+          "body": "Christiano et al., 2017 · OpenAI\n\nReinforcement Learning from Human Feedback. Trains a reward model on human comparisons — the core technique behind ChatGPT, Claude, and GPT-4.",
+          "position": [5.9, 1.8, 0],
+          "rotation": [0, -1.5708, 0]
+        },
+        {
+          "displayType": "hologram",
+          "image": "/190253-1.jpg",
+          "position": [2, 2.5, -2],
+          "rotation": [0, -0.3, 0]
+        },
+        {
+          "displayType": "hologram",
+          "title": "Scaling Laws",
+          "body": "Kaplan et al., 2020 · OpenAI\n\nModel performance scales as a power law with compute, data, and parameters — giving researchers a roadmap for frontier model development.",
+          "position": [-2, 2.5, -2],
+          "rotation": [0, 0.3, 0]
+        },
+        {
+          "displayType": "stand",
+          "standModel": "/R2.glb",
+          "standHeight": 1.2,
+          "image": "/190253-1.jpg",
+          "title": "Dataset Sample",
+          "position": [0, 0, 0]
+        }
+      ]
+    }
+  ]
+}

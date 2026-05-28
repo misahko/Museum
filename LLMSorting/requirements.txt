@@ -1,0 +1,6 @@
+ollama
+pdfplumber
+pymupdf
+sentence-transformers
+hdbscan
+numpy

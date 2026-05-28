@@ -1,0 +1,94 @@
+{
+  "rooms": [
+    {
+      "year": "1917",
+      "layout": "linear",
+      "sectors": [
+        {
+          "name": null,
+          "description": "The Russian Revolution and its aftermath explored the tension between monarchic authority and revolutionary fervor. The events demonstrate how the overthrow of the tsar ultimately led to the Bolsheviks seizing power in October.",
+          "events": [
+            {
+              "event": "the Russian Revolution overthrew the tsar",
+              "date": 1917,
+              "date_confidence": "explicit",
+              "source_file_id": "demo.txt",
+              "semi_transparent": false
+            },
+            {
+              "event": "The Bolsheviks seized power in October",
+              "date": 1917,
+              "date_confidence": "inferred_certain",
+              "source_file_id": "demo.txt",
+              "semi_transparent": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": "1918",
+      "layout": "linear",
+      "sectors": [
+        {
+          "name": null,
+          "description": "The Treaty of Brest-Litovsk marked the end of Russia's participation in WWI, leading to internal conflict and the Russian Civil War between the Red and White armies.",
+          "events": [
+            {
+              "event": "The Treaty of Brest-Litovsk was signed, ending Russian participation in WWI",
+              "date": 1918,
+              "date_confidence": "explicit",
+              "source_file_id": "demo.txt",
+              "semi_transparent": false
+            },
+            {
+              "event": "the Russian Civil War began between the Red and White armies",
+              "date": 1918,
+              "date_confidence": "explicit",
+              "source_file_id": "demo.txt",
+              "semi_transparent": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": "1920",
+      "layout": "linear",
+      "sectors": [
+        {
+          "name": null,
+          "description": "The thematic group of these events revolves around the collapse and consolidation of power after the Russian Revolution. The Bolsheviks' consolidation of control over most of the former empire marked a significant turning point in this process, as they sought to establish a new socialist state.",
+          "events": [
+            {
+              "event": "the Bolsheviks consolidated control over most of the former empire",
+              "date": 1920,
+              "date_confidence": null,
+              "source_file_id": "demo.txt",
+              "semi_transparent": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": "1922",
+      "layout": "linear",
+      "sectors": [
+        {
+          "name": null,
+          "description": "The thematic group 'Rise of Soviet Union' explores the major milestones leading to the establishment of the Soviet Union. The formation of the Russian Social Democratic Labour Party, the Russian Revolution of 1917, and the eventual collapse of the Russian Empire all contributed to this significant event.",
+          "events": [
+            {
+              "event": "The Soviet Union was formally established",
+              "date": 1922,
+              "date_confidence": "explicit",
+              "source_file_id": "demo.txt",
+              "semi_transparent": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
