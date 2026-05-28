@@ -167,19 +167,14 @@ function SearchPanel({ rooms, onTeleport, onClose }) {
 
 function QRPanel({ museumName, museumId }) {
   const [src, setSrc] = useState('');
+  const url = `${window.location.origin}${window.location.pathname}?m=${museumId}`;
 
   useEffect(() => {
-    const text = [
-      `Museum: ${museumName}`,
-      `ID: ${museumId}`,
-      `URL: ${window.location.origin}?m=${museumId}`,
-    ].join('\n');
-
-    QRCode.toDataURL(text, {
+    QRCode.toDataURL(url, {
       width: 200, margin: 2,
       color: { dark: '#e0d8ff', light: '#06040e' },
     }).then(setSrc);
-  }, [museumName, museumId]);
+  }, [url]);
 
   return (
     <div style={panel({ top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 240, textAlign: 'center' })}>
@@ -188,9 +183,10 @@ function QRPanel({ museumName, museumId }) {
           Share Museum
         </span>
       </div>
-      <div style={{ padding: '18px' }}>
-        {src && <img src={src} alt="QR" style={{ width: 160, height: 160, borderRadius: 8, display: 'block', margin: '0 auto 12px' }} />}
-        <div style={{ fontSize: 12, color: C.muted, wordBreak: 'break-all' }}>{museumName}</div>
+      <div style={{ padding: '16px 18px 18px' }}>
+        {src && <img src={src} alt="QR" style={{ width: 160, height: 160, borderRadius: 8, display: 'block', margin: '0 auto 10px' }} />}
+        <div style={{ fontSize: 12, fontWeight: 500, color: C.text, marginBottom: 4 }}>{museumName}</div>
+        <div style={{ fontSize: 9.5, color: C.dim, wordBreak: 'break-all', fontFamily: 'monospace' }}>{url}</div>
       </div>
     </div>
   );

@@ -50,7 +50,7 @@ def run(events: list[dict]) -> dict:
     raw_buckets: dict[str, list[dict]] = {}
     for e in events:
         date = e.get("date")
-        if isinstance(date, int):
+        if isinstance(date, int) and 1000 <= date <= 2100:
             key = str(date)
         elif isinstance(date, str) and date != "unknown":
             years = re.findall(r"\d{4}", date)

@@ -40,7 +40,7 @@ async function checkWithLLM(text) {
       body: JSON.stringify({
         model: OLLAMA_MODEL,
         prompt: [
-          'Does the following text describe a scientific career, academic biography, CV, or list of research publications?',
+          'Does the following text contain any substantive content — such as events, dates, facts, research, discoveries, reports, biographies, stories, histories, or academic material?',
           'Reply with only YES or NO.',
           '',
           `"${excerpt}"`,
@@ -50,17 +50,16 @@ async function checkWithLLM(text) {
       }),
     });
   } catch {
-    // Ollama unreachable — don't block the user
     return { ok: true };
   }
 
-  if (!res.ok) return { ok: true }; // same fallthrough on server error
+  if (!res.ok) return { ok: true };
 
   const data = await res.json();
   const answer = (data.response ?? '').trim().toUpperCase();
 
   if (answer.startsWith('NO')) {
-    return { ok: false, reason: 'The content does not appear to be a scientific biography or CV. Please provide your research history, publications, or academic career.' };
+    return { ok: false, reason: 'The text does not appear to contain enough substantive content. Please provide research, events, reports, or biographical material.' };
   }
 
   return { ok: true };

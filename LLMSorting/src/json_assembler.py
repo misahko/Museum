@@ -6,7 +6,10 @@ def run(ordered_buckets: dict) -> dict:
     rooms = []
 
     def sort_key(year: str) -> tuple:
-        return (year == "unknown", year)
+        try:
+            return (0, int(year))
+        except ValueError:
+            return (1, 0)  # "unknown" and non-numeric sort last
 
     for year in sorted(ordered_buckets, key=sort_key):
         bucket = ordered_buckets[year]

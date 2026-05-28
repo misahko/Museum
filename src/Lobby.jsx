@@ -144,56 +144,75 @@ const S = {
 
   panelScroll: { flex: 1, overflowY: 'auto', paddingRight: 4 },
 
-  // ── Museum rows ─────────────────────────────────────────────────────────────
+  // ── Search bar ───────────────────────────────────────────────────────────────
 
-  museumRow: (h) => ({
-    display: 'flex', alignItems: 'center', gap: 8,
-    padding: '10px 14px', borderRadius: 9, marginBottom: 5,
+  searchBar: {
+    display: 'flex', gap: 8, marginBottom: 18, flexShrink: 0, alignItems: 'center',
+  },
+  searchInput: (f) => ({
+    flex: 1, padding: '8px 14px',
+    background: 'rgba(0,0,0,0.35)',
+    border: `1px solid ${f ? T.borderFocus : T.border}`,
+    borderRadius: 8, color: T.text, fontSize: 13,
+    outline: 'none', fontFamily: 'inherit',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    boxShadow: f ? `0 0 0 3px rgba(124,58,237,0.10)` : 'none',
+  }),
+
+  // ── Museum tiles ─────────────────────────────────────────────────────────────
+
+  tileGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+    gap: 12,
+  },
+  tile: (h) => ({
+    display: 'flex', flexDirection: 'column',
+    padding: '16px 16px 12px',
+    borderRadius: 10, cursor: 'default',
     background: h
-      ? 'linear-gradient(180deg, rgba(100,50,200,0.1) 0%, rgba(80,30,160,0.04) 100%)'
-      : 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.008) 100%)',
-    border: `1px solid ${h ? 'rgba(120,65,220,0.45)' : 'rgba(100,50,200,0.22)'}`,
+      ? 'linear-gradient(160deg, rgba(100,50,200,0.14) 0%, rgba(80,30,160,0.06) 100%)'
+      : 'linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+    border: `1px solid ${h ? 'rgba(120,65,220,0.52)' : 'rgba(100,50,200,0.22)'}`,
     boxShadow: h
-      ? '0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 12px rgba(0,0,0,0.4)'
+      ? '0 6px 24px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.06) inset'
       : '0 1px 0 rgba(255,255,255,0.03) inset',
     transition: 'all 0.15s',
+    minHeight: 148,
   }),
-  museumName: {
-    flex: 1, fontSize: 13, fontWeight: 500, color: '#c8c8cc',
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+  tileName: {
+    fontSize: 13, fontWeight: 600, color: '#d8d8dc',
+    lineHeight: 1.45, marginBottom: 8, flex: 1,
+    display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
   },
-  museumMeta: {
-    fontSize: 11, color: T.textMuted, flexShrink: 0,
-    display: 'flex', alignItems: 'center', gap: 6,
+  tileMeta: {
+    fontSize: 10.5, color: T.textMuted, marginBottom: 10,
+    display: 'flex', flexWrap: 'wrap', gap: '2px 8px',
   },
-  metaDot: { color: 'rgba(160,160,168,0.25)', userSelect: 'none' },
-
-  btnEnter: (h) => ({
-    padding: '4px 11px', borderRadius: 6, flexShrink: 0,
+  tileActions: {
+    display: 'flex', gap: 5,
+  },
+  tileBtnEnter: (h) => ({
+    flex: 1, padding: '5px 0', borderRadius: 6,
     background: h
-      ? `linear-gradient(135deg, rgba(124,58,237,0.5) 0%, rgba(90,30,200,0.5) 100%)`
-      : 'rgba(100,50,200,0.08)',
-    border: `1px solid ${h ? 'rgba(140,80,255,0.65)' : 'rgba(100,50,200,0.3)'}`,
-    color: h ? '#d4b8ff' : 'rgba(160,130,220,0.65)',
+      ? 'linear-gradient(135deg, rgba(124,58,237,0.5) 0%, rgba(90,30,200,0.5) 100%)'
+      : 'rgba(100,50,200,0.1)',
+    border: `1px solid ${h ? 'rgba(140,80,255,0.65)' : 'rgba(100,50,200,0.28)'}`,
+    color: h ? '#d4b8ff' : 'rgba(160,130,220,0.7)',
     fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.2,
     transition: 'all 0.15s',
     boxShadow: h ? '0 1px 0 rgba(255,255,255,0.1) inset' : 'none',
   }),
-  btnDel: (h) => ({
-    width: 24, height: 24, borderRadius: 5, flexShrink: 0, padding: 0,
-    background: h ? 'rgba(140,20,40,0.35)' : 'transparent',
-    border: `1px solid ${h ? 'rgba(180,40,60,0.4)' : 'rgba(100,50,200,0.22)'}`,
-    color: h ? '#c06070' : T.textDim,
-    fontSize: 13, cursor: 'pointer', transition: 'all 0.15s',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  }),
-
-  btnQR: (h) => ({
-    width: 26, height: 24, borderRadius: 5, flexShrink: 0, padding: 0,
-    background: h ? 'rgba(100,50,200,0.22)' : 'transparent',
-    border: `1px solid ${h ? 'rgba(120,65,220,0.5)' : 'rgba(100,50,200,0.22)'}`,
-    color: h ? '#c0a8f0' : T.textDim,
-    fontSize: 9.5, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+  tileBtnIcon: (h, danger) => ({
+    width: 28, height: 28, borderRadius: 6, flexShrink: 0, padding: 0,
+    background: danger
+      ? (h ? 'rgba(140,20,40,0.35)' : 'transparent')
+      : (h ? 'rgba(100,50,200,0.22)' : 'transparent'),
+    border: `1px solid ${danger
+      ? (h ? 'rgba(180,40,60,0.4)' : 'rgba(100,50,200,0.22)')
+      : (h ? 'rgba(120,65,220,0.5)' : 'rgba(100,50,200,0.22)')}`,
+    color: danger ? (h ? '#c06070' : T.textDim) : (h ? '#c0a8f0' : T.textDim),
+    fontSize: 10, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
     display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: 0.3,
   }),
 
@@ -210,16 +229,17 @@ const S = {
   },
 
   btnNew: (h) => ({
-    display: 'flex', alignItems: 'center', gap: 5,
-    padding: '5px 12px', borderRadius: 6,
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '8px 18px', borderRadius: 8, flexShrink: 0, alignSelf: 'stretch',
     background: h
-      ? `linear-gradient(135deg, rgba(93, 0, 255, 0.45) 0%, rgba(90,30,200,0.45) 100%)`
+      ? `linear-gradient(135deg, rgba(93,0,255,0.45) 0%, rgba(90,30,200,0.45) 100%)`
       : 'rgba(100,50,200,0.08)',
-    border: `1px solid ${h ? 'rgba(125, 55, 255, 0.84)' : 'rgba(87, 25, 210, 0.44)'}`,
+    border: `1px solid ${h ? 'rgba(125,55,255,0.84)' : 'rgba(87,25,210,0.44)'}`,
     color: h ? '#d4b8ff' : 'rgba(160,130,220,1)',
-    fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.3,
+    fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.3,
     transition: 'all 0.15s',
     boxShadow: h ? '0 1px 0 rgba(255,255,255,0.1) inset' : 'none',
+    whiteSpace: 'nowrap',
   }),
 
   // ── States ──────────────────────────────────────────────────────────────────
@@ -343,18 +363,14 @@ const S = {
 
 function QRModal({ museum, onClose }) {
   const [src, setSrc] = useState('');
+  const url = `${window.location.origin}${window.location.pathname}?m=${museum.id}`;
 
   useEffect(() => {
-    const text = [
-      `Museum: ${museum.name}`,
-      `ID: ${museum.id}`,
-      `URL: ${window.location.origin}?m=${museum.id}`,
-    ].join('\n');
-    QRCode.toDataURL(text, {
-      width: 200, margin: 2,
+    QRCode.toDataURL(url, {
+      width: 220, margin: 2,
       color: { dark: '#e0d8ff', light: '#06040e' },
     }).then(setSrc);
-  }, [museum]);
+  }, [url]);
 
   return (
     <div style={S.qrOverlay} onClick={onClose}>
@@ -363,10 +379,11 @@ function QRModal({ museum, onClose }) {
           Share Museum
         </div>
         {src
-          ? <img src={src} alt="QR" style={{ width: 180, height: 180, borderRadius: 8, display: 'block', margin: '0 auto 14px' }} />
-          : <div style={{ width: 180, height: 180, margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textDim, fontSize: 12 }}>Generating…</div>
+          ? <img src={src} alt="QR" style={{ width: 190, height: 190, borderRadius: 8, display: 'block', margin: '0 auto 12px' }} />
+          : <div style={{ width: 190, height: 190, margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textDim, fontSize: 12 }}>Generating…</div>
         }
-        <div style={{ fontSize: 11.5, color: T.textMuted, wordBreak: 'break-all', marginBottom: 16 }}>{museum.name}</div>
+        <div style={{ fontSize: 12.5, fontWeight: 500, color: '#c8c8cc', marginBottom: 6 }}>{museum.name}</div>
+        <div style={{ fontSize: 10.5, color: T.textDim, wordBreak: 'break-all', marginBottom: 16, fontFamily: 'monospace' }}>{url}</div>
         <button
           onClick={onClose}
           style={{
@@ -382,50 +399,42 @@ function QRModal({ museum, onClose }) {
   );
 }
 
-// ── Museum row ────────────────────────────────────────────────────────────────
+// ── Museum tile ───────────────────────────────────────────────────────────────
 
-function MuseumRow({ museum, onOpen, onDelete, onQR }) {
-  const [rh, setRh] = useState(false);
+function MuseumTile({ museum, onOpen, onDelete, onQR }) {
+  const [h, setH]   = useState(false);
   const [eh, setEh] = useState(false);
-  const [dh, setDh] = useState(false);
   const [qh, setQh] = useState(false);
+  const [dh, setDh] = useState(false);
   const visits = getVisits(museum.id);
 
   return (
-    <div style={S.museumRow(rh)} onMouseEnter={() => setRh(true)} onMouseLeave={() => setRh(false)}>
-      <div style={S.museumName}>{museum.name}</div>
-      <div style={S.museumMeta}>
-        <span>{fmtDate(museum.createdAt)}</span>
-        {museum.roomCount != null && <>
-          <span style={S.metaDot}>·</span>
-          <span>{museum.roomCount}r</span>
-        </>}
-        {visits > 0 && <>
-          <span style={S.metaDot}>·</span>
-          <span>{visits} {visits === 1 ? 'visit' : 'visits'}</span>
-        </>}
+    <div style={S.tile(h)} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
+      <div style={S.tileName}>{museum.name}</div>
+      <div style={S.tileMeta}>
+        {museum.createdAt && <span>{fmtDate(museum.createdAt)}</span>}
+        {museum.roomCount != null && <span>{museum.roomCount} rooms</span>}
+        {visits > 0 && <span>{visits} {visits === 1 ? 'visit' : 'visits'}</span>}
       </div>
-      <button
-        style={S.btnQR(qh)}
-        onMouseEnter={() => setQh(true)} onMouseLeave={() => setQh(false)}
-        onClick={() => onQR(museum)}
-        title="Generate QR code"
-      >QR</button>
-      <button
-        style={S.btnEnter(eh)}
-        onMouseEnter={() => setEh(true)} onMouseLeave={() => setEh(false)}
-        onClick={() => onOpen(museum)}
-      >
-        Enter
-      </button>
-      {onDelete && (
+      <div style={S.tileActions}>
         <button
-          style={S.btnDel(dh)}
-          onMouseEnter={() => setDh(true)} onMouseLeave={() => setDh(false)}
-          onClick={() => onDelete(museum.id)}
-          title="Delete"
-        >×</button>
-      )}
+          style={S.tileBtnIcon(qh, false)}
+          onMouseEnter={() => setQh(true)} onMouseLeave={() => setQh(false)}
+          onClick={() => onQR(museum)} title="QR code"
+        >QR</button>
+        <button
+          style={S.tileBtnEnter(eh)}
+          onMouseEnter={() => setEh(true)} onMouseLeave={() => setEh(false)}
+          onClick={() => onOpen(museum)}
+        >Enter →</button>
+        {onDelete && (
+          <button
+            style={S.tileBtnIcon(dh, true)}
+            onMouseEnter={() => setDh(true)} onMouseLeave={() => setDh(false)}
+            onClick={() => onDelete(museum.id)} title="Delete"
+          >×</button>
+        )}
+      </div>
     </div>
   );
 }
@@ -461,11 +470,13 @@ const STAGE_ICONS = { 0:'▸', 1:'▸', 2:'▸', 3:'▸', 4:'▸', 5:'▸', 6:'�
 // ── Lobby ─────────────────────────────────────────────────────────────────────
 
 export function Lobby({ onMuseumReady }) {
-  const [saved, setSaved]     = useState(loadSaved);
-  const [gallery, setGallery] = useState(null); // null = loading
-  const [view, setView]       = useState('home'); // 'home' | 'create'
-  const [tab, setTab]         = useState('gallery'); // 'gallery' | 'mine'
+  const [saved, setSaved]       = useState(loadSaved);
+  const [gallery, setGallery]   = useState(null);
+  const [view, setView]         = useState('home');
+  const [tab, setTab]           = useState('gallery');
   const [qrMuseum, setQrMuseum] = useState(null);
+  const [search, setSearch]     = useState('');
+  const [searchFocus, setSearchFocus] = useState(false);
 
   // Create-form state
   const [text, setText]           = useState('');
@@ -628,7 +639,17 @@ export function Lobby({ onMuseumReady }) {
 
   if (view === 'home') return (
     <div style={S.root}>
-      <div style={S.card}>
+      <div style={{
+        ...S.card,
+        width: 'min(66.666vw, 960px)',
+        height: 'calc(100vh - 32px)',
+        margin: '32px auto 0',
+        borderRadius: '12px 12px 0 0',
+        borderLeft:  '1px solid rgba(100,50,200,0.13)',
+        borderRight: '1px solid rgba(100,50,200,0.13)',
+        borderTop:   '1px solid rgba(100,50,200,0.13)',
+        boxShadow: '-20px 0 60px rgba(0,0,0,0.35), 20px 0 60px rgba(0,0,0,0.35)',
+      }}>
         <div style={S.stripe} />
 
         {/* Top bar */}
@@ -637,7 +658,6 @@ export function Lobby({ onMuseumReady }) {
             <div style={S.logoMark}>⬡</div>
             <span style={S.appName}>Research Museum</span>
           </div>
-          {tab === 'mine' && <NewBtn onClick={() => setView('create')} />}
         </div>
 
         {/* Tab bar */}
@@ -653,32 +673,36 @@ export function Lobby({ onMuseumReady }) {
         </div>
 
         {/* Panel content */}
-        <div style={S.panel}>
+        <div style={{ ...S.panel, maxWidth: '100%', padding: '24px 40px' }}>
+
+          {/* Search bar + New button */}
+          <div style={S.searchBar}>
+            <input
+              style={S.searchInput(searchFocus)}
+              placeholder="Search museums…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onFocus={() => setSearchFocus(true)}
+              onBlur={() => setSearchFocus(false)}
+            />
+            {tab === 'mine' && <NewBtn onClick={() => setView('create')} />}
+          </div>
+
           <div style={S.panelScroll}>
+            {tab === 'gallery' && (() => {
+              if (gallery === null) return <div style={S.loadingRow}>Loading…</div>;
+              const filtered = gallery.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()));
+              if (gallery.length === 0) return <EmptyState text="No museums in the gallery." hint="Check back later." />;
+              if (filtered.length === 0) return <EmptyState text="No results." hint={`No gallery museums match "${search}".`} />;
+              return <div style={S.tileGrid}>{filtered.map(m => <MuseumTile key={m.id} museum={m} onOpen={handleOpen} onQR={setQrMuseum} />)}</div>;
+            })()}
 
-            {tab === 'gallery' && (
-              gallery === null ? (
-                <div style={S.loadingRow}>Loading…</div>
-              ) : gallery.length === 0 ? (
-                <EmptyState text="No museums in the gallery." hint="Check back later." />
-              ) : (
-                gallery.map(m => <MuseumRow key={m.id} museum={m} onOpen={handleOpen} onQR={setQrMuseum} />)
-              )
-            )}
-
-            {tab === 'mine' && (
-              saved.length === 0 ? (
-                <EmptyState
-                  text="No personal museums yet."
-                  hint="Click «+ New» to generate your first museum."
-                />
-              ) : (
-                saved.map(m => (
-                  <MuseumRow key={m.id} museum={m} onOpen={handleOpen} onDelete={handleDelete} onQR={setQrMuseum} />
-                ))
-              )
-            )}
-
+            {tab === 'mine' && (() => {
+              const filtered = saved.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()));
+              if (saved.length === 0) return <EmptyState text="No personal museums yet." hint="Click «+ New» to generate your first museum." />;
+              if (filtered.length === 0) return <EmptyState text="No results." hint={`No museums match "${search}".`} />;
+              return <div style={S.tileGrid}>{filtered.map(m => <MuseumTile key={m.id} museum={m} onOpen={handleOpen} onDelete={handleDelete} onQR={setQrMuseum} />)}</div>;
+            })()}
           </div>
         </div>
 

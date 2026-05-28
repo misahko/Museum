@@ -32,8 +32,10 @@ def extract_events(chunk: dict) -> list[dict]:
         "  - Lines that are purely numbers, dots, or URLs\n\n"
         "For each event output a JSON object:\n"
         '  {"event": "What happened (1-3 sentences)", '
-        '"date": <integer year or null>, '
-        '"date_confidence": "explicit" or null}\n\n'
+        '"date": <4-digit calendar year as integer, e.g. 1917 or 2028, or null if no 4-digit year appears in this passage>, '
+        '"date_confidence": "explicit" if a 4-digit year literally appears in the text, else null}\n\n'
+        "IMPORTANT: \"date\" must be a 4-digit year (1000–2100) or null. "
+        "Day numbers (12, 28...) or month numbers (1–12) are NOT years — set date to null for those.\n\n"
         "Return ONLY a valid JSON array. Return [] only if the passage contains absolutely no events.\n\n"
         f"Text:\n{chunk['text']}"
         + _LANG_INSTRUCTION
