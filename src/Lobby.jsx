@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { extractTextFromPDF } from './pdfParser';
 import { sortAndStructureHistory, fileToBase64 } from './llmSorting';
 import { generateMuseumRooms } from './museumGenerator';
+import { validateContent } from './contentValidator';
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 
@@ -21,286 +22,341 @@ function fmtDate(iso) {
 // ── Design tokens ─────────────────────────────────────────────────────────────
 
 const T = {
-  accent:      '#9b5cf6',
-  accentDim:   'rgba(140,80,240,0.55)',
-  accentGlow:  'rgba(120,60,220,0.25)',
-  surface:     'rgba(12,4,26,0.72)',
-  border:      'rgba(120,60,200,0.35)',
-  borderFocus: 'rgba(155,92,246,0.7)',
-  text:        '#ddd0f5',
-  textMuted:   'rgba(190,170,230,0.5)',
-  textDim:     'rgba(160,140,210,0.35)',
-  errorBg:     'rgba(160,30,55,0.15)',
-  errorBorder: 'rgba(200,60,90,0.3)',
+  accent:      '#7c3aed',
+  accentDim:   'rgba(100,50,200,0.5)',
+  accentGlow:  'rgba(80,30,180,0.2)',
+  surface:     'rgba(6,1,14,0.92)',
+  border:      'rgba(80,35,150,0.3)',
+  borderFocus: 'rgba(120,65,220,0.65)',
+  text:        '#c4b8e8',
+  textMuted:   'rgba(150,130,195,0.55)',
+  textDim:     'rgba(110,90,160,0.4)',
+  errorBg:     'rgba(100,15,35,0.3)',
+  errorBorder: 'rgba(160,40,70,0.4)',
 };
 
-// ── Shared styles ─────────────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 const S = {
   root: {
     position: 'fixed', inset: 0,
     background: `
-      radial-gradient(ellipse 55% 45% at 20% 15%, rgba(70,15,130,0.45) 0%, transparent 65%),
-      radial-gradient(ellipse 50% 55% at 85% 85%, rgba(45,8,100,0.4) 0%, transparent 60%),
-      linear-gradient(170deg, #07000f 0%, #0e0020 55%, #080012 100%)`,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
+      radial-gradient(ellipse 50% 40% at 15% 10%, rgba(45,8,100,0.35) 0%, transparent 60%),
+      radial-gradient(ellipse 45% 50% at 88% 90%, rgba(30,4,75,0.35) 0%, transparent 55%),
+      linear-gradient(170deg, #020005 0%, #06000f 50%, #030008 100%)`,
     fontFamily: '"Segoe UI", system-ui, -apple-system, sans-serif',
-    color: T.text, overflow: 'auto', padding: '24px 16px',
-    minHeight: '100vh', animation: 'fade-in 0.5s ease-out',
+    color: T.text,
+    animation: 'fade-in 0.5s ease-out',
   },
 
+  // ── Full-screen card ────────────────────────────────────────────────────────
+
   card: {
-    position: 'relative', width: '100%', maxWidth: 680,
+    position: 'relative', width: '100%', maxWidth: '100%',
+    height: '100vh',
     background: T.surface,
-    border: `1px solid ${T.border}`,
-    borderRadius: 16,
-    backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-    boxShadow: `0 1px 0 rgba(255,255,255,0.06) inset, 0 32px 80px rgba(0,0,0,0.65), 0 0 60px rgba(80,20,160,0.15)`,
-    animation: 'border-breathe 6s ease-in-out infinite',
+    border: 'none',
+    backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)',
     overflow: 'hidden',
+    display: 'flex', flexDirection: 'column',
   },
 
   stripe: {
-    height: 3,
-    background: `linear-gradient(90deg, transparent 0%, ${T.accent} 30%, rgba(100,160,255,0.8) 70%, transparent 100%)`,
-    opacity: 0.75,
+    height: 2, flexShrink: 0,
+    background: `linear-gradient(90deg, transparent 0%, ${T.accent} 35%, rgba(80,120,220,0.7) 70%, transparent 100%)`,
+    opacity: 0.6,
   },
 
-  body: { padding: '36px 44px 40px' },
+  // ── Top bar ─────────────────────────────────────────────────────────────────
 
-  wordmark: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 },
+  topBar: {
+    flexShrink: 0,
+    padding: '0 40px',
+    height: 56,
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    borderBottom: `1px solid rgba(70,30,140,0.25)`,
+    background: 'rgba(4,1,10,0.5)',
+  },
+  wordmark: { display: 'flex', alignItems: 'center', gap: 10 },
   logoMark: {
-    width: 32, height: 32, borderRadius: 8,
-    background: 'rgba(100,40,200,0.3)', border: `1px solid ${T.accentDim}`,
+    width: 28, height: 28, borderRadius: 7,
+    background: 'rgba(60,20,130,0.35)', border: `1px solid rgba(90,40,170,0.4)`,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 16, flexShrink: 0, boxShadow: `0 0 16px ${T.accentGlow}`,
+    fontSize: 14, flexShrink: 0, boxShadow: `0 0 12px ${T.accentGlow}`,
   },
-  appName: {
-    fontSize: 11, fontWeight: 700, letterSpacing: 2.5,
-    textTransform: 'uppercase', color: T.accentDim,
+  appName: { fontSize: 11, fontWeight: 700, letterSpacing: 2.5, textTransform: 'uppercase', color: 'rgba(110,70,190,0.6)' },
+
+  // ── Tab bar ─────────────────────────────────────────────────────────────────
+
+  tabBar: {
+    display: 'flex', gap: 2,
+    background: 'rgba(4,1,10,0.4)',
+    padding: '0 40px',
+    borderBottom: `1px solid rgba(70,30,140,0.2)`,
+    flexShrink: 0,
+  },
+  tab: (active) => ({
+    padding: '12px 20px',
+    background: 'none', border: 'none', cursor: 'pointer',
+    fontSize: 12.5, fontWeight: 600, letterSpacing: 0.4,
+    color: active ? '#c0a8f0' : 'rgba(130,100,190,0.45)',
+    borderBottom: `2px solid ${active ? T.accent : 'transparent'}`,
+    marginBottom: -1,
+    transition: 'color 0.15s, border-color 0.15s',
+    display: 'flex', alignItems: 'center', gap: 8,
+  }),
+  tabCount: (active) => ({
+    padding: '1px 7px', borderRadius: 10,
+    background: active ? 'rgba(100,50,200,0.25)' : 'rgba(60,25,120,0.2)',
+    fontSize: 10, fontWeight: 700,
+    color: active ? 'rgba(180,140,240,0.8)' : 'rgba(110,80,170,0.5)',
+    transition: 'all 0.15s',
+  }),
+
+  // ── Panel ───────────────────────────────────────────────────────────────────
+
+  panel: {
+    flex: 1, display: 'flex', flexDirection: 'column',
+    overflow: 'hidden', padding: '28px 40px',
+    maxWidth: 860, width: '100%', alignSelf: 'center',
+    boxSizing: 'border-box',
   },
 
-  title: {
-    fontSize: 26, fontWeight: 700, letterSpacing: '-0.3px',
-    color: '#ede5ff', lineHeight: 1.2, margin: '0 0 8px',
+  panelHead: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 16, flexShrink: 0,
   },
-  subtitle: { fontSize: 13.5, lineHeight: 1.65, color: T.textMuted, maxWidth: 520 },
-
-  rule: { border: 'none', borderTop: `1px solid rgba(120,60,200,0.2)`, margin: '24px 0' },
-
-  // ── List view ──────────────────────────────────────────────────────────────
-
-  sectionRow: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14,
-  },
-  sectionTitle: {
+  panelTitle: {
     fontSize: 11, fontWeight: 700, letterSpacing: 1.8,
     textTransform: 'uppercase', color: T.textMuted,
   },
-  countBadge: {
-    padding: '2px 9px', borderRadius: 20,
-    background: 'rgba(100,40,200,0.2)', border: '1px solid rgba(130,70,220,0.3)',
-    fontSize: 11, color: '#c4a8ff', fontWeight: 600,
+  panelCount: {
+    padding: '1px 8px', borderRadius: 10,
+    background: 'rgba(60,20,120,0.3)', border: '1px solid rgba(80,35,150,0.3)',
+    fontSize: 10, fontWeight: 700, color: 'rgba(140,100,210,0.6)',
   },
 
-  museumRow: (hover) => ({
-    display: 'flex', alignItems: 'center', gap: 12,
-    padding: '12px 14px', borderRadius: 10, marginBottom: 7,
-    background: hover ? 'rgba(90,35,190,0.12)' : 'rgba(8,2,20,0.45)',
-    border: `1px solid ${hover ? 'rgba(140,70,240,0.45)' : 'rgba(100,50,180,0.22)'}`,
-    transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
-    boxShadow: hover ? '0 0 18px rgba(100,40,200,0.1)' : 'none',
+  panelScroll: { flex: 1, overflowY: 'auto', paddingRight: 4 },
+
+  // ── Museum rows ─────────────────────────────────────────────────────────────
+
+  museumRow: (h) => ({
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: '10px 12px', borderRadius: 9, marginBottom: 6,
+    background: h ? 'rgba(50,15,110,0.18)' : 'rgba(4,1,10,0.6)',
+    border: `1px solid ${h ? 'rgba(100,45,190,0.4)' : 'rgba(65,28,130,0.28)'}`,
+    transition: 'background 0.15s, border-color 0.15s',
+    boxShadow: h ? '0 0 14px rgba(60,20,140,0.12)' : 'none',
   }),
   museumName: {
-    flex: 1, fontSize: 14, fontWeight: 600, color: '#ede5ff',
+    flex: 1, fontSize: 13, fontWeight: 600, color: '#a898c8',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   },
   museumMeta: {
-    fontSize: 12, color: T.textMuted, flexShrink: 0,
-    display: 'flex', alignItems: 'center', gap: 8,
+    fontSize: 11, color: T.textMuted, flexShrink: 0,
+    display: 'flex', alignItems: 'center', gap: 6,
   },
-  metaDot: { color: 'rgba(120,80,200,0.35)', userSelect: 'none' },
+  metaDot: { color: 'rgba(80,50,140,0.4)', userSelect: 'none' },
 
   btnEnter: (h) => ({
-    padding: '6px 14px', borderRadius: 7, flexShrink: 0,
-    background: h ? 'rgba(120,50,220,0.35)' : 'rgba(90,30,180,0.2)',
-    border: `1px solid ${h ? 'rgba(155,92,246,0.65)' : 'rgba(120,60,200,0.35)'}`,
-    color: h ? '#e0d0ff' : '#c4a8ff',
-    fontSize: 12, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.3,
-    transition: 'all 0.15s',
-    boxShadow: h ? '0 0 12px rgba(120,50,220,0.2)' : 'none',
+    padding: '4px 10px', borderRadius: 6, flexShrink: 0,
+    background: h ? 'rgba(80,30,160,0.4)' : 'rgba(50,15,110,0.3)',
+    border: `1px solid ${h ? 'rgba(110,55,210,0.6)' : 'rgba(80,35,160,0.35)'}`,
+    color: h ? '#c0a8f0' : 'rgba(150,110,220,0.7)',
+    fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.2, transition: 'all 0.15s',
   }),
-  btnDelete: (h) => ({
-    width: 28, height: 28, borderRadius: 7, flexShrink: 0, border: 'none',
-    background: h ? 'rgba(160,30,55,0.22)' : 'transparent',
-    border: `1px solid ${h ? 'rgba(200,60,90,0.4)' : 'rgba(120,60,200,0.18)'}`,
-    color: h ? '#f08090' : T.textDim,
-    fontSize: 16, lineHeight: 1, cursor: 'pointer',
+  btnDel: (h) => ({
+    width: 24, height: 24, borderRadius: 5, flexShrink: 0, padding: 0,
+    background: h ? 'rgba(120,20,40,0.3)' : 'transparent',
+    border: `1px solid ${h ? 'rgba(160,40,65,0.45)' : 'rgba(80,35,130,0.22)'}`,
+    color: h ? '#d06070' : T.textDim,
+    fontSize: 13, cursor: 'pointer', transition: 'all 0.15s',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
+  }),
+
+  // ── New Museum button (right panel) ─────────────────────────────────────────
+
+  btnNew: (h) => ({
+    display: 'flex', alignItems: 'center', gap: 5,
+    padding: '4px 10px', borderRadius: 6,
+    background: h ? 'rgba(80,30,160,0.4)' : 'rgba(50,15,110,0.28)',
+    border: `1px solid ${h ? 'rgba(110,55,210,0.6)' : 'rgba(80,35,160,0.35)'}`,
+    color: h ? '#c0a8f0' : 'rgba(140,100,210,0.65)',
+    fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.3,
     transition: 'all 0.15s',
   }),
 
-  emptyState: { padding: '36px 0 24px', textAlign: 'center' },
-  emptyText:  { fontSize: 13.5, color: T.textMuted, marginBottom: 4 },
-  emptyHint:  { fontSize: 12, color: T.textDim },
+  // ── States ──────────────────────────────────────────────────────────────────
 
-  // ── Buttons ────────────────────────────────────────────────────────────────
+  emptyState: { padding: '28px 0 8px', textAlign: 'center' },
+  emptyText:  { fontSize: 13, color: T.textMuted, marginBottom: 4 },
+  emptyHint:  { fontSize: 11.5, color: T.textDim },
 
-  btnPrimary: (disabled) => ({
-    width: '100%', padding: '12px 0', borderRadius: 10,
-    border: disabled ? '1px solid rgba(100,50,180,0.2)' : `1px solid ${T.accentDim}`,
-    background: disabled
-      ? 'rgba(50,20,90,0.25)'
-      : 'linear-gradient(135deg, rgba(85,25,175,0.9) 0%, rgba(120,50,210,0.9) 100%)',
-    color: disabled ? T.textDim : '#f0e8ff',
-    fontSize: 14, fontWeight: 600, letterSpacing: 0.4,
-    cursor: disabled ? 'default' : 'pointer', transition: 'all 0.2s',
-    boxShadow: disabled ? 'none' : `0 4px 24px rgba(100,40,200,0.35), 0 1px 0 rgba(255,255,255,0.1) inset`,
-  }),
-
-  backBtn: {
-    display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: 0, background: 'none', border: 'none', cursor: 'pointer',
-    color: T.textMuted, fontSize: 12.5, letterSpacing: 0.2,
-    marginBottom: 22, transition: 'color 0.15s',
+  loadingRow: {
+    padding: '28px 0', textAlign: 'center',
+    fontSize: 12, color: T.textDim, letterSpacing: 0.5,
   },
 
-  // ── Create-form elements ───────────────────────────────────────────────────
+  // ── Create view card body ───────────────────────────────────────────────────
+
+  createBody: {
+    overflowY: 'auto', flex: 1,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: '40px',
+  },
+  createInner: {
+    width: '100%', maxWidth: 660,
+    background: 'rgba(8,2,18,0.7)',
+    border: `1px solid rgba(80,35,150,0.35)`,
+    borderRadius: 16,
+    padding: '36px 44px 40px',
+    backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+    boxShadow: `0 1px 0 rgba(255,255,255,0.04) inset, 0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02)`,
+  },
+
+  backBtn: {
+    display: 'inline-flex', alignItems: 'center', gap: 5, padding: 0,
+    background: 'none', border: 'none', cursor: 'pointer',
+    color: T.textMuted, fontSize: 12, letterSpacing: 0.2,
+    marginBottom: 20, transition: 'color 0.15s',
+  },
+  createTitle: { fontSize: 21, fontWeight: 700, letterSpacing: '-0.3px', color: '#b8a8d8', margin: '0 0 6px' },
+  createSub:   { fontSize: 13, lineHeight: 1.65, color: T.textMuted, maxWidth: 480 },
+  rule: { border: 'none', borderTop: `1px solid rgba(70,30,130,0.3)`, margin: '20px 0' },
 
   label: {
     display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: 1.8,
     textTransform: 'uppercase', color: T.textMuted, marginBottom: 8,
   },
   textarea: (focus) => ({
-    width: '100%', minHeight: 155, padding: '13px 15px',
-    background: 'rgba(8,2,20,0.6)',
+    width: '100%', minHeight: 145, padding: '12px 14px',
+    background: 'rgba(2,0,8,0.75)',
     border: `1px solid ${focus ? T.borderFocus : T.border}`,
     borderRadius: 10, color: T.text, fontSize: 13.5, lineHeight: 1.65,
     resize: 'none', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
     transition: 'border-color 0.2s, box-shadow 0.2s',
-    boxShadow: focus ? `0 0 0 3px rgba(120,50,200,0.12)` : 'none',
+    boxShadow: focus ? `0 0 0 3px rgba(80,30,160,0.15)` : 'none',
   }),
   dropZone: (drag) => ({
-    width: '100%', padding: '16px',
-    background: drag ? 'rgba(100,40,200,0.12)' : 'rgba(8,2,20,0.4)',
-    border: `1px dashed ${drag ? T.accentDim : 'rgba(110,55,190,0.3)'}`,
+    width: '100%', padding: '14px',
+    background: drag ? 'rgba(60,20,130,0.14)' : 'rgba(2,0,8,0.55)',
+    border: `1px dashed ${drag ? 'rgba(100,50,190,0.55)' : 'rgba(65,28,130,0.3)'}`,
     borderRadius: 10, textAlign: 'center', cursor: 'pointer',
-    transition: 'all 0.2s', color: drag ? '#c4a8ff' : T.textMuted, fontSize: 13,
-    boxShadow: drag ? `0 0 20px rgba(120,50,200,0.12)` : 'none',
+    transition: 'all 0.2s', color: drag ? 'rgba(160,120,230,0.7)' : T.textMuted, fontSize: 13,
+    boxShadow: drag ? `0 0 16px rgba(70,25,150,0.12)` : 'none',
   }),
   tagRow: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   tag: {
     display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: '3px 10px', borderRadius: 6,
-    background: 'rgba(100,40,200,0.18)', border: '1px solid rgba(130,70,220,0.3)',
-    fontSize: 11.5, color: '#c4a8ff', letterSpacing: 0.2,
+    padding: '3px 9px', borderRadius: 6,
+    background: 'rgba(60,20,120,0.25)', border: '1px solid rgba(80,35,160,0.3)',
+    fontSize: 11, color: 'rgba(160,120,220,0.7)',
   },
 
-  // ── Progress ───────────────────────────────────────────────────────────────
+  btnPrimary: (disabled) => ({
+    width: '100%', padding: '11px 0', borderRadius: 10,
+    border: disabled ? '1px solid rgba(60,25,110,0.25)' : `1px solid rgba(90,40,170,0.5)`,
+    background: disabled ? 'rgba(20,5,45,0.4)' : 'linear-gradient(135deg, rgba(55,15,120,0.95) 0%, rgba(85,30,165,0.95) 100%)',
+    color: disabled ? 'rgba(90,65,140,0.5)' : '#b0a0d8',
+    fontSize: 14, fontWeight: 600, letterSpacing: 0.4,
+    cursor: disabled ? 'default' : 'pointer', transition: 'all 0.2s',
+    boxShadow: disabled ? 'none' : `0 4px 20px rgba(60,15,140,0.4), 0 1px 0 rgba(255,255,255,0.06) inset`,
+  }),
 
-  progressSection: { marginTop: 20 },
-  progressHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  progressSection: { marginTop: 18 },
+  progressHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 },
   progressLabel:   { fontSize: 11, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: T.textMuted },
   progressPct:     { fontSize: 12, fontWeight: 700, color: T.accent, fontVariantNumeric: 'tabular-nums' },
-  progressTrack:   { height: 3, background: 'rgba(60,20,110,0.5)', borderRadius: 2, overflow: 'hidden', marginBottom: 14 },
+  progressTrack:   { height: 2, background: 'rgba(30,8,65,0.7)', borderRadius: 2, overflow: 'hidden', marginBottom: 12 },
   progressFill: (pct) => ({
     height: '100%', width: `${pct}%`,
-    background: `linear-gradient(90deg, ${T.accent} 0%, #a0c0ff 100%)`,
+    background: `linear-gradient(90deg, ${T.accent} 0%, rgba(80,100,200,0.9) 100%)`,
     borderRadius: 2, transition: 'width 0.4s ease',
     animation: 'progress-glow 2s ease-in-out infinite',
   }),
   logBox: {
-    background: 'rgba(4,1,12,0.7)', border: `1px solid rgba(90,40,160,0.25)`,
-    borderRadius: 8, padding: '10px 14px', maxHeight: 148, overflowY: 'auto',
+    background: 'rgba(2,0,6,0.85)', border: `1px solid rgba(55,22,110,0.3)`,
+    borderRadius: 8, padding: '10px 14px', maxHeight: 130, overflowY: 'auto',
     fontFamily: '"SF Mono", "Fira Code", "Courier New", monospace', fontSize: 11.5, lineHeight: 1.8,
   },
-  logLine: (last) => ({ display: 'flex', alignItems: 'baseline', gap: 10, color: last ? '#c4a8ff' : 'rgba(160,140,210,0.4)' }),
-
+  logLine: (last) => ({ display: 'flex', alignItems: 'baseline', gap: 10, color: last ? 'rgba(160,120,220,0.85)' : 'rgba(100,80,150,0.45)' }),
   errorBox: {
-    marginTop: 14, padding: '11px 15px', borderRadius: 8,
+    padding: '11px 14px', borderRadius: 8, marginTop: 14,
     background: T.errorBg, border: `1px solid ${T.errorBorder}`,
-    color: '#f08090', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.5,
+    color: '#b05060', fontSize: 13, lineHeight: 1.5,
   },
 
-  // ── Footer (dev only) ──────────────────────────────────────────────────────
-
   footer: {
-    marginTop: 28, paddingTop: 20, borderTop: `1px solid rgba(100,50,170,0.18)`,
+    marginTop: 18, paddingTop: 14, borderTop: `1px solid rgba(60,25,110,0.2)`,
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
     fontSize: 11, color: T.textDim, letterSpacing: 0.3,
   },
   footerCode: {
     padding: '1px 6px', borderRadius: 4,
-    background: 'rgba(80,30,150,0.2)', border: '1px solid rgba(100,50,180,0.25)',
-    fontFamily: 'monospace', fontSize: 10.5, color: 'rgba(180,150,240,0.4)',
+    background: 'rgba(40,12,90,0.3)', border: '1px solid rgba(65,25,130,0.3)',
+    fontFamily: 'monospace', fontSize: 10.5, color: 'rgba(110,75,180,0.45)',
   },
-  footerDot: { color: 'rgba(120,80,200,0.3)' },
+  footerDot: { color: 'rgba(70,35,130,0.4)' },
 };
 
 // ── Museum row ────────────────────────────────────────────────────────────────
 
 function MuseumRow({ museum, onOpen, onDelete }) {
-  const [rowHover, setRowHover]     = useState(false);
-  const [enterHover, setEnterHover] = useState(false);
-  const [delHover, setDelHover]     = useState(false);
+  const [rh, setRh] = useState(false);
+  const [eh, setEh] = useState(false);
+  const [dh, setDh] = useState(false);
 
   return (
-    <div
-      style={S.museumRow(rowHover)}
-      onMouseEnter={() => setRowHover(true)}
-      onMouseLeave={() => setRowHover(false)}
-    >
+    <div style={S.museumRow(rh)} onMouseEnter={() => setRh(true)} onMouseLeave={() => setRh(false)}>
       <div style={S.museumName}>{museum.name}</div>
       <div style={S.museumMeta}>
         <span>{fmtDate(museum.createdAt)}</span>
-        <span style={S.metaDot}>·</span>
-        <span>{museum.roomCount} {museum.roomCount === 1 ? 'room' : 'rooms'}</span>
+        {museum.roomCount != null && <>
+          <span style={S.metaDot}>·</span>
+          <span>{museum.roomCount}r</span>
+        </>}
       </div>
       <button
-        style={S.btnEnter(enterHover)}
-        onMouseEnter={() => setEnterHover(true)}
-        onMouseLeave={() => setEnterHover(false)}
+        style={S.btnEnter(eh)}
+        onMouseEnter={() => setEh(true)} onMouseLeave={() => setEh(false)}
         onClick={() => onOpen(museum)}
       >
         Enter
       </button>
-      <button
-        style={S.btnDelete(delHover)}
-        onMouseEnter={() => setDelHover(true)}
-        onMouseLeave={() => setDelHover(false)}
-        onClick={() => onDelete(museum.id)}
-        title="Delete museum"
-      >
-        ×
-      </button>
+      {onDelete && (
+        <button
+          style={S.btnDel(dh)}
+          onMouseEnter={() => setDh(true)} onMouseLeave={() => setDh(false)}
+          onClick={() => onDelete(museum.id)}
+          title="Delete"
+        >×</button>
+      )}
     </div>
   );
 }
 
-// ── Shared card shell ─────────────────────────────────────────────────────────
+// ── New button ────────────────────────────────────────────────────────────────
 
-function CardShell({ children }) {
+function NewBtn({ onClick }) {
+  const [h, setH] = useState(false);
   return (
-    <div style={S.root}>
-      <div style={S.card}>
-        <div style={S.stripe} />
-        <div style={S.body}>{children}</div>
-      </div>
-    </div>
+    <button
+      style={S.btnNew(h)}
+      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      onClick={onClick}
+    >
+      + New
+    </button>
   );
 }
 
-function CardHeader() {
+// ── Empty / loading states ────────────────────────────────────────────────────
+
+function EmptyState({ text, hint }) {
   return (
-    <div style={{ marginBottom: 24 }}>
-      <div style={S.wordmark}>
-        <div style={S.logoMark}>⬡</div>
-        <span style={S.appName}>Research Museum</span>
-      </div>
-      <h1 style={S.title}>Science Museum Generator</h1>
-      <p style={S.subtitle}>
-        Personalised 3D museums of scientific research careers, generated from CV and publication data.
-      </p>
+    <div style={S.emptyState}>
+      <p style={S.emptyText}>{text}</p>
+      {hint && <p style={S.emptyHint}>{hint}</p>}
     </div>
   );
 }
@@ -310,8 +366,10 @@ const STAGE_ICONS = { 0:'▸', 1:'▸', 2:'▸', 3:'▸', 4:'▸', 5:'▸', 6:'�
 // ── Lobby ─────────────────────────────────────────────────────────────────────
 
 export function Lobby({ onMuseumReady }) {
-  const [saved, setSaved]       = useState(loadSaved);
-  const [view, setView]         = useState('list');
+  const [saved, setSaved]     = useState(loadSaved);
+  const [gallery, setGallery] = useState(null); // null = loading
+  const [view, setView]       = useState('home'); // 'home' | 'create'
+  const [tab, setTab]         = useState('gallery'); // 'gallery' | 'mine'
 
   // Create-form state
   const [text, setText]         = useState('');
@@ -328,14 +386,28 @@ export function Lobby({ onMuseumReady }) {
 
   useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [logs]);
 
+  // Fetch gallery from DB
+  useEffect(() => {
+    fetch('/api/museums')
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(data => setGallery(Array.isArray(data) ? data : []))
+      .catch(() => setGallery([]));
+  }, []);
+
+  // Personal museum management
+  function handleDelete(id) {
+    setSaved(prev => { const next = prev.filter(m => m.id !== id); writeSaved(next); return next; });
+  }
+
+  function handleOpen(museum) { onMuseumReady({ rooms: museum.rooms }); }
+
+  // File processing
   const addLog = (stage, message, percent) => {
     setLogs(prev => [...prev, { icon: STAGE_ICONS[stage] ?? '▸', message, percent }]);
     setProgress({ percent, message });
   };
 
-  const addText = (extra) => setText(prev =>
-    prev.trim() ? prev + '\n\n---\n\n' + extra : extra
-  );
+  const addText = (extra) => setText(prev => prev.trim() ? prev + '\n\n---\n\n' + extra : extra);
 
   const processFiles = useCallback(async (files) => {
     const pdfs = [...files].filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
@@ -355,23 +427,18 @@ export function Lobby({ onMuseumReady }) {
 
   const handleDrop = (e) => { e.preventDefault(); setDrag(false); processFiles(e.dataTransfer.files); };
 
-  function handleDelete(id) {
-    setSaved(prev => { const next = prev.filter(m => m.id !== id); writeSaved(next); return next; });
-  }
-
-  function handleOpen(museum) { onMuseumReady({ rooms: museum.rooms }); }
-
-  function goToCreate() { setView('create'); setPhase('idle'); setErrorMsg(''); }
-  function goToList()   { setView('list');   setPhase('idle'); setErrorMsg(''); }
-
   const handleGenerate = async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
     setPhase('generating'); setErrorMsg('');
-    setLogs([]); setProgress({ percent: 0, message: 'Initialising…' });
+    setLogs([]); setProgress({ percent: 0, message: 'Validating content…' });
 
     try {
-      addLog(0, 'Preparing files…', 2);
+      addLog(0, 'Validating content…', 2);
+      const validation = await validateContent(trimmed);
+      if (!validation.ok) { setErrorMsg(validation.reason); setPhase('error'); return; }
+
+      addLog(0, 'Preparing files…', 5);
       const pdfsBase64 = await Promise.all(
         pdfFiles.map(async f => ({ name: f.name, data: await fileToBase64(f) }))
       );
@@ -391,153 +458,184 @@ export function Lobby({ onMuseumReady }) {
         rooms,
       };
       setSaved(prev => { const next = [entry, ...prev]; writeSaved(next); return next; });
-
       setTimeout(() => onMuseumReady({ rooms }), 400);
     } catch (e) { setErrorMsg(e.message); setPhase('error'); }
   };
 
   const busy = phase === 'parsing' || phase === 'generating';
 
-  // ── List view ───────────────────────────────────────────────────────────────
+  const DevFooter = () => import.meta.env.DEV ? (
+    <div style={S.footer}>
+      <code style={S.footerCode}>cd LLMSorting &amp;&amp; python server.py</code>
+      <span style={S.footerDot}>·</span>
+      <code style={S.footerCode}>ollama pull llama3</code>
+    </div>
+  ) : null;
 
-  if (view === 'list') return (
-    <CardShell>
-      <CardHeader />
-      <hr style={S.rule} />
+  // ── Home view (tabs, full screen) ────────────────────────────────────────
 
-      <div style={S.sectionRow}>
-        <span style={S.sectionTitle}>Your Museums</span>
-        {saved.length > 0 && <span style={S.countBadge}>{saved.length}</span>}
-      </div>
+  if (view === 'home') return (
+    <div style={S.root}>
+      <div style={S.card}>
+        <div style={S.stripe} />
 
-      {saved.length === 0 ? (
-        <div style={S.emptyState}>
-          <p style={S.emptyText}>No museums yet.</p>
-          <p style={S.emptyHint}>Generate your first museum from a CV or publication list.</p>
-        </div>
-      ) : (
-        <div style={{ marginBottom: 4 }}>
-          {saved.map(m => (
-            <MuseumRow key={m.id} museum={m} onOpen={handleOpen} onDelete={handleDelete} />
-          ))}
-        </div>
-      )}
-
-      <div style={{ marginTop: saved.length === 0 ? 20 : 14 }}>
-        <button style={S.btnPrimary(false)} onClick={goToCreate}>
-          New Museum
-        </button>
-      </div>
-
-      {import.meta.env.DEV && (
-        <div style={S.footer}>
-          <code style={S.footerCode}>cd LLMSorting &amp;&amp; python server.py</code>
-          <span style={S.footerDot}>·</span>
-          <code style={S.footerCode}>ollama pull llama3</code>
-        </div>
-      )}
-    </CardShell>
-  );
-
-  // ── Create view ─────────────────────────────────────────────────────────────
-
-  return (
-    <CardShell>
-      <button style={S.backBtn} onClick={goToList}>
-        ← My Museums
-      </button>
-
-      <div style={{ marginBottom: 22 }}>
-        <h1 style={{ ...S.title, fontSize: 22 }}>New Museum</h1>
-        <p style={S.subtitle}>
-          Provide your scientific biography, CV, or publication list to generate a personalised 3D museum.
-        </p>
-      </div>
-
-      <hr style={S.rule} />
-
-      <label style={S.label}>Research content</label>
-      <textarea
-        style={S.textarea(taFocus)}
-        placeholder={'Paste your CV, biography, list of papers, projects, awards…'}
-        value={text}
-        onChange={e => setText(e.target.value)}
-        onFocus={() => setTaFocus(true)}
-        onBlur={() => setTaFocus(false)}
-        disabled={busy}
-      />
-
-      <div style={{ marginTop: 18 }}>
-        <div style={S.label}>Attachments</div>
-        <div
-          style={S.dropZone(drag)}
-          onClick={() => fileRef.current?.click()}
-          onDragOver={e => { e.preventDefault(); setDrag(true); }}
-          onDragLeave={() => setDrag(false)}
-          onDrop={handleDrop}
-        >
-          {phase === 'parsing' ? 'Extracting text from file…' : 'Click to select or drag PDF / .txt files here'}
-        </div>
-        <input
-          ref={fileRef} type="file"
-          accept=".pdf,.txt,text/plain,application/pdf"
-          multiple style={{ display: 'none' }}
-          onChange={e => processFiles(e.target.files)}
-        />
-        {pdfNames.length > 0 && (
-          <div style={S.tagRow}>
-            {pdfNames.map(n => <span key={n} style={S.tag}>{n}</span>)}
+        {/* Top bar */}
+        <div style={S.topBar}>
+          <div style={S.wordmark}>
+            <div style={S.logoMark}>⬡</div>
+            <span style={S.appName}>Research Museum</span>
           </div>
+          {tab === 'mine' && <NewBtn onClick={() => setView('create')} />}
+        </div>
+
+        {/* Tab bar */}
+        <div style={S.tabBar}>
+          <button style={S.tab(tab === 'gallery')} onClick={() => setTab('gallery')}>
+            Gallery
+            {gallery?.length > 0 && <span style={S.tabCount(tab === 'gallery')}>{gallery.length}</span>}
+          </button>
+          <button style={S.tab(tab === 'mine')} onClick={() => setTab('mine')}>
+            My Museums
+            {saved.length > 0 && <span style={S.tabCount(tab === 'mine')}>{saved.length}</span>}
+          </button>
+        </div>
+
+        {/* Panel content */}
+        <div style={S.panel}>
+          <div style={S.panelScroll}>
+
+            {tab === 'gallery' && (
+              gallery === null ? (
+                <div style={S.loadingRow}>Loading…</div>
+              ) : gallery.length === 0 ? (
+                <EmptyState text="No museums in the gallery." hint="Check back later." />
+              ) : (
+                gallery.map(m => <MuseumRow key={m.id} museum={m} onOpen={handleOpen} />)
+              )
+            )}
+
+            {tab === 'mine' && (
+              saved.length === 0 ? (
+                <EmptyState
+                  text="No personal museums yet."
+                  hint="Click «+ New» to generate your first museum."
+                />
+              ) : (
+                saved.map(m => (
+                  <MuseumRow key={m.id} museum={m} onOpen={handleOpen} onDelete={handleDelete} />
+                ))
+              )
+            )}
+
+          </div>
+        </div>
+
+        {import.meta.env.DEV && (
+          <div style={{ padding: '0 40px', flexShrink: 0 }}><DevFooter /></div>
         )}
       </div>
+    </div>
+  );
 
-      <div style={{ marginTop: 24 }}>
-        <button
-          style={S.btnPrimary(busy || !text.trim())}
-          onClick={handleGenerate}
-          disabled={busy || !text.trim()}
-        >
-          {phase === 'generating' ? 'Processing…' : 'Generate Museum'}
-        </button>
-      </div>
+  // ── Create view ───────────────────────────────────────────────────────────
 
-      {phase === 'generating' && (
-        <div style={S.progressSection}>
-          <div style={S.progressHeader}>
-            <span style={S.progressLabel}>Building</span>
-            <span style={S.progressPct}>{progress.percent}%</span>
+  return (
+    <div style={S.root}>
+      <div style={S.card}>
+        <div style={S.stripe} />
+        <div style={S.createBody}>
+         <div style={S.createInner}>
+
+          <button style={S.backBtn} onClick={() => { setView('home'); setPhase('idle'); setErrorMsg(''); }}>
+            ← Museums
+          </button>
+
+          <h1 style={S.createTitle}>New Museum</h1>
+          <p style={S.createSub}>
+            Provide your scientific biography, CV, or publication list to generate a personalised 3D museum.
+          </p>
+
+          <hr style={S.rule} />
+
+          <label style={S.label}>Research content</label>
+          <textarea
+            style={S.textarea(taFocus)}
+            placeholder="Paste your CV, biography, list of papers, projects, awards…"
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onFocus={() => setTaFocus(true)}
+            onBlur={() => setTaFocus(false)}
+            disabled={busy}
+          />
+
+          <div style={{ marginTop: 16 }}>
+            <div style={S.label}>Attachments</div>
+            <div
+              style={S.dropZone(drag)}
+              onClick={() => fileRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDrag(true); }}
+              onDragLeave={() => setDrag(false)}
+              onDrop={handleDrop}
+            >
+              {phase === 'parsing' ? 'Extracting text from file…' : 'Click to select or drag PDF / .txt files here'}
+            </div>
+            <input
+              ref={fileRef} type="file"
+              accept=".pdf,.txt,text/plain,application/pdf"
+              multiple style={{ display: 'none' }}
+              onChange={e => processFiles(e.target.files)}
+            />
+            {pdfNames.length > 0 && (
+              <div style={S.tagRow}>
+                {pdfNames.map(n => <span key={n} style={S.tag}>{n}</span>)}
+              </div>
+            )}
           </div>
-          <div style={S.progressTrack}>
-            <div style={S.progressFill(progress.percent)} />
+
+          <div style={{ marginTop: 22 }}>
+            <button
+              style={S.btnPrimary(busy || !text.trim())}
+              onClick={handleGenerate}
+              disabled={busy || !text.trim()}
+            >
+              {phase === 'generating' ? 'Processing…' : 'Generate Museum'}
+            </button>
           </div>
-          {import.meta.env.DEV && (
-            <div style={S.logBox}>
-              {logs.map((l, i) => {
-                const isLast = i === logs.length - 1;
-                return (
-                  <div key={i} style={S.logLine(isLast)}>
-                    <span style={{ minWidth: 34, textAlign: 'right', flexShrink: 0, fontWeight: 600, color: isLast ? T.accent : 'rgba(120,80,200,0.5)' }}>
-                      {l.percent}%
-                    </span>
-                    <span>{l.icon} {l.message}</span>
-                  </div>
-                );
-              })}
-              <div ref={logEndRef} />
+
+          {phase === 'generating' && (
+            <div style={S.progressSection}>
+              <div style={S.progressHeader}>
+                <span style={S.progressLabel}>Building</span>
+                <span style={S.progressPct}>{progress.percent}%</span>
+              </div>
+              <div style={S.progressTrack}>
+                <div style={S.progressFill(progress.percent)} />
+              </div>
+              {import.meta.env.DEV && (
+                <div style={S.logBox}>
+                  {logs.map((l, i) => {
+                    const isLast = i === logs.length - 1;
+                    return (
+                      <div key={i} style={S.logLine(isLast)}>
+                        <span style={{ minWidth: 34, textAlign: 'right', flexShrink: 0, fontWeight: 600, color: isLast ? T.accent : 'rgba(100,60,180,0.5)' }}>
+                          {l.percent}%
+                        </span>
+                        <span>{l.icon} {l.message}</span>
+                      </div>
+                    );
+                  })}
+                  <div ref={logEndRef} />
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      {phase === 'error' && <div style={S.errorBox}>Error: {errorMsg}</div>}
+          {phase === 'error' && <div style={S.errorBox}>{errorMsg}</div>}
 
-      {import.meta.env.DEV && (
-        <div style={S.footer}>
-          <code style={S.footerCode}>cd LLMSorting &amp;&amp; python server.py</code>
-          <span style={S.footerDot}>·</span>
-          <code style={S.footerCode}>ollama pull llama3</code>
+          <DevFooter />
+         </div>
         </div>
-      )}
-    </CardShell>
+      </div>
+    </div>
   );
 }

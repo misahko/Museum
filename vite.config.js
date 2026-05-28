@@ -11,6 +11,16 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api\/llm/, ''),
       },
+      '/api/ollama': {
+        target: 'http://localhost:11434',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api\/ollama/, ''),
+      },
+      '/api/museums': {
+        target: 'http://localhost:8765',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api/, ''),
+      },
     },
   },
 })
