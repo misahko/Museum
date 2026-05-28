@@ -195,8 +195,8 @@ const S = {
   tileBtnEnter: (h) => ({
     flex: 1, padding: '5px 0', borderRadius: 6,
     background: h
-      ? 'linear-gradient(135deg, rgba(124,58,237,0.5) 0%, rgba(90,30,200,0.5) 100%)'
-      : 'rgba(100,50,200,0.1)',
+      ? 'linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(90,30,200,0.4) 100%)'
+      : 'rgba(100,50,200,0.08)',
     border: `1px solid ${h ? 'rgba(140,80,255,0.65)' : 'rgba(100,50,200,0.28)'}`,
     color: h ? '#d4b8ff' : 'rgba(160,130,220,0.7)',
     fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.2,

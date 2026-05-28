@@ -17,41 +17,61 @@ def extract_events(chunk: dict) -> list[dict]:
         "You are an extractor for a research biography museum.\n"
         "Extract EVERY event, achievement, publication, award, appointment, project, role, or milestone "
         "from the text below — whether or not a year is mentioned.\n\n"
-        "CRITICAL RULES:\n"
-        "1. Include ALL events even if they have NO date. Never skip an event because its year is unknown.\n"
-        "2. \"date\": use the year as an integer if it appears literally in THIS text. "
-        "Otherwise set \"date\": null — do NOT guess or infer.\n"
-        "3. \"date_confidence\": \"explicit\" only when the year number literally appears in this passage. "
-        "Otherwise null.\n"
-        "4. Never omit a sentence that describes something that happened, was published, awarded, or started.\n\n"
+        "CRITICAL RULES FOR THE DATE FIELD:\n"
+        "1. \"date\" must be a 4-digit integer (e.g. 1917, 2028) ONLY if that exact 4-digit number "
+        "appears literally in the passage below. Otherwise \"date\" MUST be null.\n"
+        "2. DO NOT invent, guess, estimate, or assume any year. If you are not 100% certain the year "
+        "appears word-for-word in the text, write null.\n"
+        "3. Month numbers (1-12) and day numbers (1-31) are NOT years. Set date to null for those.\n"
+        "4. Never skip an event just because it has no date.\n\n"
+        "EXAMPLES:\n"
+        "Text has no year: "
+        "{\"event\": \"She won the best paper award.\", \"date\": null, \"date_confidence\": null}\n"
+        "Text says '...in 2019 she published...': "
+        "{\"event\": \"She published a paper.\", \"date\": 2019, \"date_confidence\": \"explicit\"}\n\n"
         "SKIP only:\n"
         "  - Table of contents entries (title + page number only)\n"
         "  - Bare page numbers, headers, footers\n"
         "  - Figure captions that are only labels (e.g. 'Fig. 1')\n"
         "  - Raw bibliography/reference list entries\n"
         "  - Lines that are purely numbers, dots, or URLs\n\n"
-        "For each event output a JSON object:\n"
+        "For each event output:\n"
         '  {"event": "What happened (1-3 sentences)", '
-        '"date": <4-digit calendar year as integer, e.g. 1917 or 2028, or null if no 4-digit year appears in this passage>, '
-        '"date_confidence": "explicit" if a 4-digit year literally appears in the text, else null}\n\n'
-        "IMPORTANT: \"date\" must be a 4-digit year (1000–2100) or null. "
-        "Day numbers (12, 28...) or month numbers (1–12) are NOT years — set date to null for those.\n\n"
-        "Return ONLY a valid JSON array. Return [] only if the passage contains absolutely no events.\n\n"
+        '"date": <4-digit year integer OR null>, '
+        '"date_confidence": "explicit" if that year literally appears in the text, else null}\n\n'
+        "Return ONLY a valid JSON array.\n\n"
         f"Text:\n{chunk['text']}"
         + _LANG_INSTRUCTION
     )
     response = ollama.chat(model=MODEL, messages=[{"role": "user", "content": prompt}])
     content = response["message"]["content"].strip()
+    text = chunk["text"]
     return [
-        {
-            "event": e.get("event", ""),
-            "date": e.get("date"),
-            "date_confidence": e.get("date_confidence"),
-            "source_file_id": chunk["file_id"],
-            "chunk_index": chunk["chunk_index"],
-        }
+        _validated_event(e, text, chunk["file_id"], chunk["chunk_index"])
         for e in _extract_json_array(content)
+        if e.get("event", "").strip()
     ]
+
+
+def _validated_event(e: dict, chunk_text: str, file_id: str, chunk_index: int) -> dict:
+    """Strip any hallucinated year that doesn't literally appear in the chunk text."""
+    date = e.get("date")
+    confidence = e.get("date_confidence")
+
+    # Accept only valid 4-digit years
+    if not (isinstance(date, int) and 1000 <= date <= 2100):
+        date, confidence = None, None
+    elif str(date) not in chunk_text:
+        # LLM claimed the year is explicit but it's not in the text — hallucinated
+        date, confidence = None, None
+
+    return {
+        "event": e.get("event", ""),
+        "date": date,
+        "date_confidence": confidence,
+        "source_file_id": file_id,
+        "chunk_index": chunk_index,
+    }
 
 
 def name_cluster(representative_event: str) -> str:
