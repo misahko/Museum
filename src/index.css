@@ -1,6 +1,6 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-body { overflow: hidden; background: #020005; }
+body { overflow: hidden; background: #060608; }
 
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(12px); }

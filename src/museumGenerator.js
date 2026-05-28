@@ -1,29 +1,81 @@
-/**
- * Converts LLMSorting pipeline output into 3D room configs for the museum.
- *
- * Input schema (from LLMSorting server):
- *   {
- *     rooms:  [{year, layout, sectors: [{name, description, events: [{event, date, date_confidence, semi_transparent}]}]}],
- *     images: [{file_id, page, width, height, data_url}]   // optional
- *   }
- *
- * Output: array of BoxRoom-compatible room configs (rooms.json schema).
- */
+import { getSkin } from './skins.js';
 
-// Five wall slots in a 12×4×12 BoxRoom
+const P = Math.PI;
+
+// ── Normal room (12×4×12) exhibit slots ───────────────────────────────────────
+
 const SLOTS = [
   { position: [-3.5, 1.8, -5.9], rotation: [0, 0, 0] },
   { position: [ 0,   1.8, -5.9], rotation: [0, 0, 0] },
   { position: [ 3.5, 1.8, -5.9], rotation: [0, 0, 0] },
-  { position: [-5.9, 1.8, -2],   rotation: [0,  Math.PI / 2, 0] },
-  { position: [ 5.9, 1.8, -2],   rotation: [0, -Math.PI / 2, 0] },
+  { position: [-5.9, 1.8, -2],   rotation: [0,  P / 2, 0] },
+  { position: [ 5.9, 1.8, -2],   rotation: [0, -P / 2, 0] },
 ];
 
-// Image hologram positions — floating in free space, not on walls
 const IMAGE_POSITIONS = [
   [2.5, 2.4, 0],
   [-2.5, 2.4, 0],
 ];
+
+// ── Big room (24×5×24) sector zones ──────────────────────────────────────────
+// Four quadrants: NW / NE / SW / SE.  Each has 6 wall slots + a hologram label.
+
+const BIG_SECTOR_ZONES = [
+  {
+    // NW quadrant: north wall left section + west wall north section
+    label: [-7, 4, -7],
+    slots: [
+      { position: [-10,  2.2, -11.9], rotation: [0,      0, 0] },
+      { position: [ -7,  2.2, -11.9], rotation: [0,      0, 0] },
+      { position: [ -4,  2.2, -11.9], rotation: [0,      0, 0] },
+      { position: [-11.9, 2.2,  -8],  rotation: [0,  P/2, 0] },
+      { position: [-11.9, 2.2,  -4],  rotation: [0,  P/2, 0] },
+      { position: [-11.9, 2.2,  -1],  rotation: [0,  P/2, 0] },
+    ],
+  },
+  {
+    // NE quadrant: north wall right section + east wall north section
+    label: [7, 4, -7],
+    slots: [
+      { position: [  4,  2.2, -11.9], rotation: [0,      0, 0] },
+      { position: [  7,  2.2, -11.9], rotation: [0,      0, 0] },
+      { position: [ 10,  2.2, -11.9], rotation: [0,      0, 0] },
+      { position: [11.9, 2.2,  -8],   rotation: [0, -P/2, 0] },
+      { position: [11.9, 2.2,  -4],   rotation: [0, -P/2, 0] },
+      { position: [11.9, 2.2,  -1],   rotation: [0, -P/2, 0] },
+    ],
+  },
+  {
+    // SW quadrant: west wall south section + south wall left section
+    label: [-7, 4, 7],
+    slots: [
+      { position: [-11.9, 2.2,  1],   rotation: [0,  P/2, 0] },
+      { position: [-11.9, 2.2,  4],   rotation: [0,  P/2, 0] },
+      { position: [-11.9, 2.2,  8],   rotation: [0,  P/2, 0] },
+      { position: [-10,  2.2,  11.9], rotation: [0,    P, 0] },
+      { position: [ -7,  2.2,  11.9], rotation: [0,    P, 0] },
+      { position: [ -4,  2.2,  11.9], rotation: [0,    P, 0] },
+    ],
+  },
+  {
+    // SE quadrant: east wall south section + south wall right section
+    label: [7, 4, 7],
+    slots: [
+      { position: [11.9, 2.2,  1],   rotation: [0, -P/2, 0] },
+      { position: [11.9, 2.2,  4],   rotation: [0, -P/2, 0] },
+      { position: [11.9, 2.2,  8],   rotation: [0, -P/2, 0] },
+      { position: [  4,  2.2, 11.9], rotation: [0,    P, 0] },
+      { position: [  7,  2.2, 11.9], rotation: [0,    P, 0] },
+      { position: [ 10,  2.2, 11.9], rotation: [0,    P, 0] },
+    ],
+  },
+];
+
+const BIG_IMAGE_POSITIONS = [
+  [4, 3, 0], [-4, 3, 0], [0, 3, 4], [0, 3, -4],
+];
+
+// ── Theme rotation (used when no skin is chosen) ───────────────────────────────
 
 const THEMES = [
   { wallColor: '#1a1a2e', accentColor: '#5a3f9a' },
@@ -55,94 +107,122 @@ function eventToExhibit(event, slot) {
   };
 }
 
-/**
- * Distributes extracted images across rooms.
- * Returns an array where index i contains the images for room i.
- */
 function distributeImages(images, numRooms) {
   if (!images?.length || !numRooms) return Array.from({ length: numRooms }, () => []);
-
   const buckets = Array.from({ length: numRooms }, () => []);
-  images.forEach((img, i) => {
-    buckets[i % numRooms].push(img);
-  });
+  images.forEach((img, i) => { buckets[i % numRooms].push(img); });
   return buckets;
 }
 
 /**
- * Converts LLMSorting museum JSON to an array of BoxRoom configs.
- * Each year-bucket becomes one 3D room; rooms are linked in sequence.
+ * @param {object} llmOutput
+ * @param {object} [opts]
+ * @param {string} [opts.skinId]      skin preset id
+ * @param {string|null} [opts.sceneModel]  GLB path for entrance room
  */
-export function generateMuseumRooms(llmOutput) {
+export function generateMuseumRooms(llmOutput, opts = {}) {
   const yearRooms = llmOutput.rooms ?? [];
   const imageBuckets = distributeImages(llmOutput.images, yearRooms.length);
+  const skin = opts.skinId ? getSkin(opts.skinId) : null;
 
   return yearRooms.map((room, idx) => {
-    const id = `gen-${idx}`;
+    const id     = `gen-${idx}`;
     const prevId = idx === 0 ? 'lobby' : `gen-${idx - 1}`;
     const nextId = idx < yearRooms.length - 1 ? `gen-${idx + 1}` : null;
 
+    // Use big room for multi-sector (thematic_clusters) years
+    const isBig = room.layout === 'thematic_clusters' && room.sectors.length > 1;
+
+    // ── Portals ────────────────────────────────────────────────────────────────
     const portals = [
       {
         targetRoom: prevId,
         label: idx === 0 ? '← Exit' : '← Back',
-        position: [4.5, 1.5, 0],
+        position: isBig ? [11.5, 2, 0] : [5.5, 1.5, 0],
       },
     ];
     if (nextId) {
-      portals.push({ targetRoom: nextId, label: 'Next →', position: [-4.5, 1.5, 0] });
+      portals.push({
+        targetRoom: nextId,
+        label: 'Next →',
+        position: isBig ? [-11.5, 2, 0] : [-5.5, 1.5, 0],
+      });
     }
 
-    // ── Text exhibits from events ──────────────────────────────────────────────
-    const allEvents = room.sectors.flatMap(s => s.events);
-    const wallExhibits = allEvents
-      .slice(0, SLOTS.length)
-      .map((ev, i) => eventToExhibit(ev, SLOTS[i]));
+    // ── Exhibits ────────────────────────────────────────────────────────────────
+    let wallExhibits, sectorHolos;
 
-    // ── Year hologram (year label + first sector description) ──────────────────
-    const firstDesc = room.sectors[0]?.description ?? '';
-    const holoBody = firstDesc.length > 220
-      ? firstDesc.slice(0, 217) + '…'
-      : firstDesc || undefined;
-
-    const yearHologram = {
-      displayType: 'hologram',
-      title: room.year === 'unknown' ? 'Undated Events' : String(room.year),
-      body: holoBody,
-      position: [0, 2.9, -3],
-    };
-
-    // ── Sector-name holograms for thematic_clusters rooms ─────────────────────
-    const sectorHolos = [];
-    if (room.layout === 'thematic_clusters') {
-      room.sectors.slice(0, 3).forEach((sector, si) => {
+    if (isBig) {
+      wallExhibits = [];
+      sectorHolos  = [];
+      room.sectors.forEach((sector, si) => {
+        const zone = BIG_SECTOR_ZONES[si % BIG_SECTOR_ZONES.length];
+        sector.events.slice(0, zone.slots.length).forEach((ev, ei) => {
+          wallExhibits.push(eventToExhibit(ev, zone.slots[ei]));
+        });
         if (sector.name) {
           sectorHolos.push({
             displayType: 'hologram',
             title: sector.name,
-            body: sector.description?.slice(0, 150),
-            position: [-3 + si * 3, 2.2, -1],
+            body: sector.description?.slice(0, 200),
+            position: zone.label,
           });
         }
       });
+    } else {
+      const allEvents = room.sectors.flatMap(s => s.events);
+      wallExhibits = allEvents.slice(0, SLOTS.length).map((ev, i) => eventToExhibit(ev, SLOTS[i]));
+      sectorHolos  = [];
+      if (room.layout === 'thematic_clusters') {
+        room.sectors.slice(0, 3).forEach((sector, si) => {
+          if (sector.name) {
+            sectorHolos.push({
+              displayType: 'hologram',
+              title: sector.name,
+              body: sector.description?.slice(0, 150),
+              position: [-3 + si * 3, 2.2, -1],
+            });
+          }
+        });
+      }
     }
 
-    // ── Image holograms from PDF extraction ────────────────────────────────────
+    // ── Year hologram ──────────────────────────────────────────────────────────
+    const firstDesc = room.sectors[0]?.description ?? '';
+    const holoBody = firstDesc.length > 220 ? firstDesc.slice(0, 217) + '…' : firstDesc || undefined;
+    const yearHologram = {
+      displayType: 'hologram',
+      title: room.year === 'unknown' ? 'Undated Events' : String(room.year),
+      body: holoBody,
+      position: isBig ? [0, 4.3, 0] : [0, 2.9, -3],
+    };
+
+    // ── Image holograms ────────────────────────────────────────────────────────
+    const imgPositions = isBig ? BIG_IMAGE_POSITIONS : IMAGE_POSITIONS;
     const imageHolos = imageBuckets[idx]
-      .slice(0, IMAGE_POSITIONS.length)
+      .slice(0, imgPositions.length)
       .map((img, i) => ({
         displayType: 'hologram',
         image: img.data_url,
         title: `p.${img.page}`,
-        position: IMAGE_POSITIONS[i],
+        position: imgPositions[i],
       }));
+
+    const colours = skin
+      ? { wallColor: skin.wallColor, accentColor: skin.accentColor }
+      : THEMES[idx % THEMES.length];
+
+    const isEntrance = idx === 0 && opts.sceneModel;
 
     return {
       id,
-      spawn: [0, 1, 4],
+      year: room.year,
+      big: isBig,
+      spawn: isBig ? [0, 1, 8] : [0, 1, 4],
+      ...(isEntrance ? { model: opts.sceneModel } : {}),
       portals,
       exhibits: [...wallExhibits, yearHologram, ...sectorHolos, ...imageHolos],
-      ...THEMES[idx % THEMES.length],
+      ...colours,
     };
   });
 }

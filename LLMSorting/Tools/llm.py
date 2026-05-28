@@ -14,21 +14,27 @@ _LANG_INSTRUCTION = (
 def extract_events(chunk: dict) -> list[dict]:
     """Stage 2: extract event cards from one chunk."""
     prompt = (
-        "You are a precise event extractor. Given the text below, extract concrete historical events.\n"
-        "Use ALL substantive content in the text.\n"
-        "SKIP and ignore completely:\n"
-        "  - Table of contents entries (lines that are just a title + page number)\n"
-        "  - Page numbers, headers, footers, running titles\n"
-        "  - Section/chapter numbers and headings that contain no event information\n"
-        "  - Figure captions that are only labels (e.g. 'Fig. 1', 'Мал. 2')\n"
-        "  - Bibliography, references, and citation lists\n"
-        "  - Any line that is purely a number, a dot sequence, or a URL\n"
-        "For each real event create a JSON object:\n"
-        '  {"event": "What happened (1-2 sentences)", "date": <year as integer or null>, '
-        '"date_confidence": "explicit" | null}\n'
-        'Set date_confidence to "explicit" ONLY if the year appears literally in this text. '
-        "If the year is not stated in THIS text, set date to null.\n"
-        "Return ONLY a valid JSON array. Return [] if no events found.\n\n"
+        "You are an extractor for a research biography museum.\n"
+        "Extract EVERY event, achievement, publication, award, appointment, project, role, or milestone "
+        "from the text below — whether or not a year is mentioned.\n\n"
+        "CRITICAL RULES:\n"
+        "1. Include ALL events even if they have NO date. Never skip an event because its year is unknown.\n"
+        "2. \"date\": use the year as an integer if it appears literally in THIS text. "
+        "Otherwise set \"date\": null — do NOT guess or infer.\n"
+        "3. \"date_confidence\": \"explicit\" only when the year number literally appears in this passage. "
+        "Otherwise null.\n"
+        "4. Never omit a sentence that describes something that happened, was published, awarded, or started.\n\n"
+        "SKIP only:\n"
+        "  - Table of contents entries (title + page number only)\n"
+        "  - Bare page numbers, headers, footers\n"
+        "  - Figure captions that are only labels (e.g. 'Fig. 1')\n"
+        "  - Raw bibliography/reference list entries\n"
+        "  - Lines that are purely numbers, dots, or URLs\n\n"
+        "For each event output a JSON object:\n"
+        '  {"event": "What happened (1-3 sentences)", '
+        '"date": <integer year or null>, '
+        '"date_confidence": "explicit" or null}\n\n'
+        "Return ONLY a valid JSON array. Return [] only if the passage contains absolutely no events.\n\n"
         f"Text:\n{chunk['text']}"
         + _LANG_INSTRUCTION
     )
@@ -77,11 +83,28 @@ def order_and_describe_bucket(events: list[dict]) -> dict:
 
 
 def _extract_json_array(text: str) -> list:
+    # Try direct array extraction first
     start = text.find("[")
     end = text.rfind("]") + 1
-    if start == -1 or end == 0:
-        return []
-    try:
-        return json.loads(text[start:end])
-    except json.JSONDecodeError:
-        return []
+    if start != -1 and end > 0:
+        try:
+            result = json.loads(text[start:end])
+            if isinstance(result, list):
+                return result
+        except json.JSONDecodeError:
+            pass
+
+    # Fallback: maybe the LLM wrapped the array in an object like {"events": [...]}
+    obj_start = text.find("{")
+    obj_end = text.rfind("}") + 1
+    if obj_start != -1 and obj_end > 0:
+        try:
+            obj = json.loads(text[obj_start:obj_end])
+            if isinstance(obj, dict):
+                for v in obj.values():
+                    if isinstance(v, list):
+                        return v
+        except json.JSONDecodeError:
+            pass
+
+    return []

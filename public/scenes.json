@@ -1,0 +1,4 @@
+[
+  { "id": "procedural", "label": "Procedural Rooms", "model": null,      "description": "Auto-generated box rooms" },
+  { "id": "r2",         "label": "Structure R2",     "model": "/R2.glb", "description": "Abstract 3D structure" }
+]

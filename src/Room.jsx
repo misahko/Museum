@@ -1,5 +1,6 @@
-import { Suspense, useEffect, useMemo } from 'react';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useGLTF, Html } from '@react-three/drei';
+import { useFrame, useThree } from '@react-three/fiber';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import { applyReplacements } from './replaceObjects';
@@ -32,7 +33,7 @@ function GltfRoomContent({ config }) {
         <CuboidCollider args={[50, 0.1, 50]} position={[0, -0.1, 0]} />
       </RigidBody>
 
-      {config.replacements.map(r => (
+      {(config.replacements ?? []).map(r => (
         <Suspense key={r.name} fallback={null}>
           <ReplacementLoader name={r.name} modelPath={r.model} scene={scene} />
         </Suspense>
@@ -42,8 +43,10 @@ function GltfRoomContent({ config }) {
 }
 
 // ─── Portal marker ────────────────────────────────────────────────────────────
-// Look at the glowing panel and click to teleport.
-// Accepts an optional `scene` for meshName-based positioning (GLTF rooms only).
+// Proximity-based: automatically teleports when camera gets within TRIGGER_DIST.
+// onClick kept as fallback when pointer lock is not active.
+
+const TRIGGER_DIST = 1.6;
 
 function PortalMarker({ config, scene, onTeleport }) {
   const position = useMemo(() => {
@@ -58,14 +61,30 @@ function PortalMarker({ config, scene, onTeleport }) {
     return config.position ?? [0, 1.5, 2];
   }, [config, scene]);
 
+  const portalVec  = useMemo(() => new THREE.Vector3(...position), [position]);
+  const triggered  = useRef(false);
+  const { camera } = useThree();
+
+  useFrame(() => {
+    const dist = camera.position.distanceTo(portalVec);
+    if (dist < TRIGGER_DIST) {
+      if (!triggered.current) {
+        triggered.current = true;
+        onTeleport(config.targetRoom);
+      }
+    } else {
+      triggered.current = false;
+    }
+  });
+
   return (
     <mesh position={position} onClick={() => onTeleport(config.targetRoom)}>
-      <boxGeometry args={[0.6, 0.6, 0.05]} />
-      <meshStandardMaterial color="#00cfff" emissive="#00cfff" emissiveIntensity={0.6} />
-      <Html center distanceFactor={4}>
+      <boxGeometry args={[0.8, 1.8, 0.05]} />
+      <meshStandardMaterial color="#00cfff" emissive="#00cfff" emissiveIntensity={0.8} transparent opacity={0.55} />
+      <Html center distanceFactor={5}>
         <div style={{
           color: '#fff',
-          background: 'rgba(0,0,0,0.8)',
+          background: 'rgba(0,0,0,0.75)',
           border: '1px solid #00cfff',
           borderRadius: 4,
           padding: '4px 12px',
@@ -102,6 +121,7 @@ export function Room({ config, onTeleport }) {
           <BoxRoom
             wallColor={config.wallColor}
             accentColor={config.accentColor}
+            big={config.big ?? false}
           />
         )
       }
