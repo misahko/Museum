@@ -18,7 +18,7 @@ function makeFloorTexture(big) {
   const tile = 512 / tiles;
   for (let x = 0; x < tiles; x++) {
     for (let y = 0; y < tiles; y++) {
-      ctx.fillStyle = (x + y) % 2 === 0 ? '#16161a' : '#1e1e26';
+      ctx.fillStyle = (x + y) % 2 === 0 ? '#22222e' : '#2c2c3c';
       ctx.fillRect(x * tile, y * tile, tile, tile);
     }
   }
@@ -35,7 +35,7 @@ function makeFloorTexture(big) {
  *   accentColor – emissive top-trim colour
  *   big         – if true, uses 24×5×24 with 4 section zones
  */
-export function BoxRoom({ wallColor = '#252530', accentColor = '#4a3f6b', big = false }) {
+export function BoxRoom({ wallColor = '#32324a', accentColor = '#6050a0', big = false }) {
   const floorTex = useMemo(() => makeFloorTexture(big), [big]);
 
   const W = big ? BIG_ROOM_W : ROOM_W;
@@ -63,7 +63,7 @@ export function BoxRoom({ wallColor = '#252530', accentColor = '#4a3f6b', big = 
       {/* Ceiling */}
       <mesh position={[0, H, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[W, D]} />
-        <meshStandardMaterial color="#0e0e12" />
+        <meshStandardMaterial color="#1e1e2c" />
       </mesh>
 
       {/* Back wall (north) */}

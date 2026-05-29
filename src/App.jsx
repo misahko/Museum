@@ -82,11 +82,11 @@ export default function App() {
   const museumId   = museumMeta?.id ?? 'default';
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#080808' }}>
+    <div style={{ width: '100vw', height: '100vh', background: '#080810' }}>
       <Canvas camera={{ position: [0, 2, 5], fov: 75 }}>
         <Physics gravity={[0, -9.81, 0]}>
-          <ambientLight intensity={1} />
-          <directionalLight color="white" position={[10, 10, 10]} intensity={5.5} />
+          <ambientLight intensity={1.6} />
+          <directionalLight color="white" position={[10, 10, 10]} intensity={6.5} />
           <Suspense fallback={null}>
             <Room key={currentRoomId} config={roomConfig} onTeleport={handleTeleport} />
           </Suspense>

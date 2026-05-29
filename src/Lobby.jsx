@@ -25,20 +25,21 @@ function fmtDate(iso) {
 // ── Design tokens ─────────────────────────────────────────────────────────────
 
 const T = {
-  accent:      '#7c3aed',
-  accentDim:   'rgba(110,60,210,0.6)',
-  accentGlow:  'rgba(80,30,180,0.15)',
-  surface:     'rgba(10,10,12,0.96)',
-  border:      'rgba(100,50,200,0.3)',
-  borderHover: 'rgba(120,65,220,0.55)',
-  borderFocus: 'rgba(110, 55, 211, 0.62)',
-  text:        '#d4d4d8',
-  textMuted:   'rgba(160,160,168,0.55)',
-  textDim:     'rgba(110,110,118,0.45)',
-  errorBg:     'rgba(80,10,20,0.4)',
-  errorBorder: 'rgba(140,30,50,0.45)',
+  accent:      '#9060e0',
+  accentDim:   'rgba(134,95,212,0.7)',
+  accentGlow:  'rgba(114,78,200,0.2)',
+  surface:     'rgba(26,26,30,0.98)',
+  border:      'rgba(112,76,196,0.5)',
+  borderHover: 'rgba(142,105,222,0.75)',
+  borderFocus: 'rgba(142,105,224,0.85)',
+  borderSection: 'rgba(255,255,255,0.07)',
+  text:        '#e0e0e6',
+  textMuted:   'rgba(172,170,188,0.82)',
+  textDim:     'rgba(135,133,150,0.65)',
+  errorBg:     'rgba(90,15,30,0.6)',
+  errorBorder: 'rgba(180,55,75,0.6)',
   metal:       'rgba(255,255,255,0.06)',
-  metalBright: 'rgba(255,255,255,0.1)',
+  metalBright: 'rgba(255,255,255,0.11)',
 };
 
 const C = { dim: T.textDim }; // shorthand used in ORCID section
@@ -48,7 +49,7 @@ const C = { dim: T.textDim }; // shorthand used in ORCID section
 const S = {
   root: {
     position: 'fixed', inset: 0,
-    background: '#060608',
+    background: '#111213',
     fontFamily: '"Segoe UI", system-ui, -apple-system, sans-serif',
     color: T.text,
   },
@@ -58,14 +59,14 @@ const S = {
   card: {
     position: 'relative', width: '100%', maxWidth: '100%',
     height: '100vh',
-    background: 'linear-gradient(180deg, #0e0e10 0%, #080809 100%)',
+    background: '#191a1c',
     overflow: 'hidden',
     display: 'flex', flexDirection: 'column',
   },
 
   stripe: {
-    height: 1, flexShrink: 0,
-    background: `linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 20%, ${T.accent} 50%, rgba(255,255,255,0.12) 80%, transparent 100%)`,
+    height: 2, flexShrink: 0,
+    background: `linear-gradient(90deg, transparent 0%, rgba(135,95,210,0.4) 20%, ${T.accent} 50%, rgba(135,95,210,0.4) 80%, transparent 100%)`,
   },
 
   // ── Top bar ─────────────────────────────────────────────────────────────────
@@ -75,47 +76,50 @@ const S = {
     padding: '0 40px',
     height: 54,
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    borderBottom: `1px solid rgba(100,50,200,0.25)`,
-    background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%)',
-    boxShadow: '0 1px 0 rgba(100,50,200,0.1)',
+    borderBottom: `1px solid rgba(112,76,196,0.5)`,
+    background: 'rgba(255,255,255,0.03)',
+    boxShadow: '0 1px 12px rgba(82,52,168,0.15)',
   },
   wordmark: { display: 'flex', alignItems: 'center', gap: 10 },
   logoMark: {
     width: 28, height: 28, borderRadius: 7,
-    background: 'linear-gradient(135deg, rgba(100,50,200,0.2) 0%, rgba(80,30,160,0.1) 100%)',
-    border: `1px solid rgba(100,50,200,0.4)`,
+    background: 'linear-gradient(135deg, rgba(114,78,200,0.3) 0%, rgba(78,68,140,0.2) 100%)',
+    border: `1px solid rgba(130,88,215,0.55)`,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 14, flexShrink: 0,
-    boxShadow: `0 1px 0 rgba(255,255,255,0.08) inset, 0 0 10px ${T.accentGlow}`,
-    color: 'rgba(180,140,255,0.7)',
+    boxShadow: `0 1px 0 rgba(255,255,255,0.1) inset, 0 0 14px ${T.accentGlow}`,
+    color: 'rgba(182,145,242,0.9)',
   },
-  appName: { fontSize: 11, fontWeight: 600, letterSpacing: 2.5, textTransform: 'uppercase', color: 'rgba(180,180,190,0.35)' },
+  appName: { fontSize: 11, fontWeight: 600, letterSpacing: 2.5, textTransform: 'uppercase', color: 'rgba(190,188,210,0.65)' },
 
   // ── Tab bar ─────────────────────────────────────────────────────────────────
 
   tabBar: {
     display: 'flex', gap: 0,
     padding: '0 40px',
-    borderBottom: `1px solid rgba(100,50,200,0.25)`,
+    borderBottom: `1px solid rgba(112,76,196,0.5)`,
     flexShrink: 0,
-    background: 'rgba(0,0,0,0.2)',
+    background: 'rgba(0,0,0,0.25)',
+    boxShadow: '0 1px 0 rgba(82,52,168,0.1)',
   },
-  tab: (active) => ({
-    padding: '13px 22px',
-    background: 'none', border: 'none', cursor: 'pointer',
+  tab: (active, focused) => ({
+    padding: '13px 0', width: 140, justifyContent: 'center',
+    background: focused ? 'rgba(144,96,224,0.08)' : 'none',
+    border: 'none', cursor: 'pointer', outline: 'none',
     fontSize: 12.5, fontWeight: 600, letterSpacing: 0.3,
-    color: active ? '#e0e0e4' : 'rgba(140,140,150,0.45)',
-    borderBottom: `2px solid ${active ? T.accent : 'transparent'}`,
+    color: active || focused ? '#f0f0f8' : 'rgba(160,158,180,0.65)',
+    borderBottom: `2px solid ${active ? T.accent : focused ? 'rgba(144,96,224,0.5)' : 'transparent'}`,
     marginBottom: -1,
-    transition: 'color 0.15s, border-color 0.15s',
+    transition: 'color 0.15s, border-color 0.15s, background 0.15s',
     display: 'flex', alignItems: 'center', gap: 8,
+    borderRadius: '6px 6px 0 0',
   }),
   tabCount: (active) => ({
     padding: '1px 7px', borderRadius: 10,
-    background: active ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)',
-    border: `1px solid ${active ? 'rgba(124,58,237,0.35)' : 'rgba(255,255,255,0.07)'}`,
+    background: active ? 'rgba(135,95,210,0.22)' : 'rgba(255,255,255,0.06)',
+    border: `1px solid ${active ? 'rgba(135,95,210,0.5)' : 'rgba(255,255,255,0.1)'}`,
     fontSize: 10, fontWeight: 700,
-    color: active ? 'rgba(180,140,255,0.85)' : 'rgba(130,130,140,0.5)',
+    color: active ? 'rgba(182,145,242,0.95)' : 'rgba(140,138,158,0.6)',
     transition: 'all 0.15s',
   }),
 
@@ -134,12 +138,12 @@ const S = {
   },
   panelTitle: {
     fontSize: 11, fontWeight: 600, letterSpacing: 1.8,
-    textTransform: 'uppercase', color: 'rgba(160,160,168,0.45)',
+    textTransform: 'uppercase', color: 'rgba(175,172,200,0.75)',
   },
   panelCount: {
     padding: '1px 8px', borderRadius: 10,
-    background: 'rgba(100,50,200,0.12)', border: '1px solid rgba(100,50,200,0.3)',
-    fontSize: 10, fontWeight: 600, color: 'rgba(160,130,220,0.6)',
+    background: 'rgba(108,72,188,0.2)', border: '1px solid rgba(128,92,210,0.55)',
+    fontSize: 10, fontWeight: 600, color: 'rgba(178,140,240,0.9)',
   },
 
   panelScroll: { flex: 1, overflowY: 'auto', paddingRight: 4 },
@@ -156,7 +160,7 @@ const S = {
     borderRadius: 8, color: T.text, fontSize: 13,
     outline: 'none', fontFamily: 'inherit',
     transition: 'border-color 0.2s, box-shadow 0.2s',
-    boxShadow: f ? `0 0 0 3px rgba(124,58,237,0.10)` : 'none',
+    boxShadow: f ? `0 0 0 3px rgba(135,95,210,0.15)` : 'none',
   }),
 
   // ── Museum tiles ─────────────────────────────────────────────────────────────
@@ -171,13 +175,13 @@ const S = {
     padding: '16px 16px 12px',
     borderRadius: 10, cursor: 'default',
     background: h
-      ? 'linear-gradient(160deg, rgba(100,50,200,0.14) 0%, rgba(80,30,160,0.06) 100%)'
-      : 'linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-    border: `1px solid ${h ? 'rgba(120,65,220,0.52)' : 'rgba(100,50,200,0.22)'}`,
+      ? 'linear-gradient(160deg, rgba(114,78,200,0.16) 0%, rgba(78,68,140,0.09) 100%)'
+      : 'linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)',
+    border: `1px solid ${h ? 'rgba(142,105,222,0.7)' : 'rgba(112,76,196,0.45)'}`,
     boxShadow: h
-      ? '0 6px 24px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.06) inset'
-      : '0 1px 0 rgba(255,255,255,0.03) inset',
-    transition: 'all 0.15s',
+      ? '0 4px 20px rgba(82,52,168,0.22), 0 1px 0 rgba(255,255,255,0.08) inset'
+      : '0 4px 20px rgba(0,0,0,0), 0 1px 0 rgba(255,255,255,0) inset',
+    transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
     minHeight: 148,
   }),
   tileName: {
@@ -195,50 +199,54 @@ const S = {
   tileBtnEnter: (h) => ({
     flex: 1, padding: '5px 0', borderRadius: 6,
     background: h
-      ? 'linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(90,30,200,0.4) 100%)'
-      : 'rgba(100,50,200,0.08)',
-    border: `1px solid ${h ? 'rgba(140,80,255,0.65)' : 'rgba(100,50,200,0.28)'}`,
-    color: h ? '#d4b8ff' : 'rgba(160,130,220,0.7)',
+      ? 'linear-gradient(135deg, rgba(128,88,210,0.3) 0%, rgba(98,60,182,0.4) 100%)'
+      : 'linear-gradient(135deg, rgba(105,68,192,0.08) 0%, rgba(90,55,168,0.06) 100%)',
+    border: `1px solid ${h ? 'rgba(142,105,222,0.65)' : 'rgba(105,68,192,0.28)'}`,
+    color: h ? '#bda8f8' : 'rgba(160,115,230,0.7)',
     fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.2,
-    transition: 'all 0.15s',
-    boxShadow: h ? '0 1px 0 rgba(255,255,255,0.1) inset' : 'none',
+    transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s',
+    outline: 'none',
+    boxShadow: h ? '0 0 0 2px rgba(144,96,224,0.35), 0 1px 0 rgba(255,255,255,0.1) inset' : '0 0 0 0 transparent',
   }),
   tileBtnIcon: (h, danger) => ({
     width: 28, height: 28, borderRadius: 6, flexShrink: 0, padding: 0,
     background: danger
       ? (h ? 'rgba(140,20,40,0.35)' : 'transparent')
-      : (h ? 'rgba(100,50,200,0.22)' : 'transparent'),
+      : (h ? 'rgba(105,68,192,0.22)' : 'transparent'),
     border: `1px solid ${danger
-      ? (h ? 'rgba(180,40,60,0.4)' : 'rgba(100,50,200,0.22)')
-      : (h ? 'rgba(120,65,220,0.5)' : 'rgba(100,50,200,0.22)')}`,
+      ? (h ? 'rgba(180,40,60,0.4)' : 'rgba(105,68,192,0.22)')
+      : (h ? 'rgba(118,80,204,0.5)' : 'rgba(105,68,192,0.22)')}`,
     color: danger ? (h ? '#c06070' : T.textDim) : (h ? '#c0a8f0' : T.textDim),
-    fontSize: 10, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+    fontSize: 10, fontWeight: 700, cursor: 'pointer',
+    transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s',
     display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: 0.3,
+    outline: 'none',
+    boxShadow: h ? `0 0 0 2px ${danger ? 'rgba(200,60,80,0.35)' : 'rgba(144,96,224,0.35)'}` : '0 0 0 0 transparent',
   }),
 
   qrOverlay: {
     position: 'fixed', inset: 0, zIndex: 200,
-    background: 'rgba(0,0,0,0.72)',
+    background: 'rgba(0,0,0,0.55)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   qrModal: {
-    background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)',
-    border: '1px solid rgba(100,50,200,0.35)',
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.04) 100%)',
+    border: '1px solid rgba(120,70,220,0.45)',
     borderRadius: 16, padding: '28px 32px', textAlign: 'center', maxWidth: 280,
-    boxShadow: '0 24px 60px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.07) inset',
+    boxShadow: '0 24px 60px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.14) inset',
   },
 
   btnNew: (h) => ({
     display: 'flex', alignItems: 'center', gap: 6,
     padding: '8px 18px', borderRadius: 8, flexShrink: 0, alignSelf: 'stretch',
     background: h
-      ? `linear-gradient(135deg, rgba(93,0,255,0.45) 0%, rgba(90,30,200,0.45) 100%)`
-      : 'rgba(100,50,200,0.08)',
-    border: `1px solid ${h ? 'rgba(125,55,255,0.84)' : 'rgba(87,25,210,0.44)'}`,
-    color: h ? '#d4b8ff' : 'rgba(160,130,220,1)',
+      ? `linear-gradient(135deg, rgba(110,74,200,0.45) 0%, rgba(98,60,182,0.45) 100%)`
+      : `linear-gradient(135deg, rgba(105,68,192,0.08) 0%, rgba(90,55,168,0.06) 100%)`,
+    border: `1px solid ${h ? 'rgba(130,88,215,0.84)' : 'rgba(98,60,182,0.44)'}`,
+    color: h ? '#bda8f8' : 'rgba(160,115,230,1)',
     fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.3,
-    transition: 'all 0.15s',
-    boxShadow: h ? '0 1px 0 rgba(255,255,255,0.1) inset' : 'none',
+    transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s',
+    boxShadow: h ? '0 1px 0 rgba(255,255,255,0.1) inset' : '0 0 0 0 transparent',
     whiteSpace: 'nowrap',
   }),
 
@@ -262,64 +270,68 @@ const S = {
   },
   createInner: {
     width: '100%', maxWidth: 660,
-    background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)',
-    border: `1px solid rgba(100,50,200,0.35)`,
+    background: 'rgba(255,255,255,0.04)',
+    border: `1px solid rgba(112,76,196,0.55)`,
     borderRadius: 16,
     padding: '36px 44px 40px',
-    boxShadow: `0 1px 0 rgba(255,255,255,0.07) inset, 0 24px 60px rgba(0,0,0,0.7), 0 0 30px rgba(80,30,180,0.08)`,
+    boxShadow: `0 0 0 1px rgba(255,255,255,0.05) inset, 0 24px 60px rgba(0,0,0,0.6), 0 0 40px rgba(82,52,168,0.12)`,
   },
 
-  backBtn: {
-    display: 'inline-flex', alignItems: 'center', gap: 5, padding: 0,
-    background: 'none', border: 'none', cursor: 'pointer',
-    color: T.textMuted, fontSize: 12, letterSpacing: 0.2,
-    marginBottom: 20, transition: 'color 0.15s',
-  },
+  backBtn: (h) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 5,
+    padding: '4px 8px', margin: '-4px -8px 16px',
+    background: 'none', border: 'none', cursor: 'pointer', outline: 'none',
+    borderRadius: 6,
+    color: h ? T.text : T.textMuted, fontSize: 12, letterSpacing: 0.2,
+    transition: 'color 0.15s, box-shadow 0.15s',
+    boxShadow: h ? '0 0 0 2px rgba(144,96,224,0.35)' : '0 0 0 0 transparent',
+  }),
   createTitle: { fontSize: 21, fontWeight: 700, letterSpacing: '-0.3px', color: '#d8d8dc', margin: '0 0 6px' },
   createSub:   { fontSize: 13, lineHeight: 1.65, color: T.textMuted, maxWidth: 480 },
-  rule: { border: 'none', borderTop: `1px solid rgba(70,30,130,0.3)`, margin: '20px 0' },
+  rule: { border: 'none', borderTop: `1px solid rgba(112,76,196,0.45)`, margin: '20px 0' },
 
   label: {
     display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: 1.8,
-    textTransform: 'uppercase', color: 'rgba(160,160,168,0.5)', marginBottom: 8,
+    textTransform: 'uppercase', color: 'rgba(185,185,198,0.75)', marginBottom: 8,
   },
   textarea: (focus) => ({
     width: '100%', minHeight: 145, padding: '12px 14px',
     background: 'rgba(0,0,0,0.4)',
     border: `1px solid ${focus ? T.borderFocus : T.border}`,
-    borderRadius: 10, color: '#d0d0d4', fontSize: 13.5, lineHeight: 1.65,
+    borderRadius: 10, color: '#e4e4ec', fontSize: 13.5, lineHeight: 1.65,
     resize: 'none', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
     transition: 'border-color 0.2s, box-shadow 0.2s',
     boxShadow: focus
-      ? `0 0 0 3px rgba(124,58,237,0.12), 0 1px 0 rgba(255,255,255,0.05) inset`
-      : '0 1px 0 rgba(255,255,255,0.04) inset',
+      ? `0 0 0 3px rgba(135,95,210,0.18)`
+      : 'none',
   }),
   dropZone: (drag) => ({
     width: '100%', padding: '14px',
-    background: drag ? 'rgba(124, 58, 237, 0.2)' : 'rgba(0,0,0,0.3)',
-    border: `1px dashed ${drag ? 'rgba(124,58,237,0.45)' : 'rgba(255,255,255,0.08)'}`,
+    background: drag ? 'rgba(135,95,210,0.15)' : 'rgba(0,0,0,0.3)',
+    border: `1px dashed ${drag ? 'rgba(152,136,208,0.7)' : 'rgba(112,76,196,0.5)'}`,
     borderRadius: 10, textAlign: 'center', cursor: 'pointer',
-    transition: 'all 0.2s', color: drag ? 'rgba(208, 143, 254, 0.55)' : T.textMuted, fontSize: 13,
+    transition: 'all 0.2s', color: drag ? 'rgba(188,162,225,0.85)' : T.textMuted, fontSize: 13,
   }),
   tagRow: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   tag: {
     display: 'inline-flex', alignItems: 'center', gap: 5,
     padding: '3px 9px', borderRadius: 6,
     background: 'rgba(60,20,120,0.25)', border: '1px solid rgba(80,35,160,0.3)',
-    fontSize: 11, color: 'rgba(160,120,220,0.7)',
+    fontSize: 11, color: 'rgba(140,88,205,0.7)',
   },
 
   btnPrimary: (disabled) => ({
     width: '100%', padding: '11px 0', borderRadius: 10,
-    border: disabled ? '1px solid rgba(255,255,255,0.05)' : `1px solid rgba(124,58,237,0.45)`,
+    border: disabled ? '1px solid rgba(255,255,255,0.05)' : `1px solid rgba(128,88,210,0.45)`,
     background: disabled
-      ? 'rgba(255,255,255,0.03)'
-      : 'linear-gradient(135deg, rgba(124,58,237,0.55) 0%, rgba(90,30,200,0.55) 100%)',
-    color: disabled ? 'rgba(120,120,128,0.4)' : '#d4c8f0',
+      ? 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.02) 100%)'
+      : 'linear-gradient(135deg, rgba(128,88,210,0.55) 0%, rgba(98,60,182,0.55) 100%)',
+    color: disabled ? 'rgba(120,120,128,0.4)' : '#bda8f8',
     fontSize: 14, fontWeight: 600, letterSpacing: 0.4,
-    cursor: disabled ? 'default' : 'pointer', transition: 'all 0.2s',
+    cursor: disabled ? 'default' : 'pointer',
+    transition: 'background 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s',
     boxShadow: disabled
-      ? 'none'
+      ? '0 0 0 0 transparent'
       : `0 4px 20px rgba(100,40,220,0.2), 0 1px 0 rgba(255,255,255,0.1) inset`,
   }),
 
@@ -327,15 +339,15 @@ const S = {
   progressHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 },
   progressLabel:   { fontSize: 11, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: T.textMuted },
   progressPct:     { fontSize: 12, fontWeight: 700, color: T.accent, fontVariantNumeric: 'tabular-nums' },
-  progressTrack:   { height: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden', marginBottom: 12 },
+  progressTrack:   { height: 2, background: 'rgba(255,255,255,0.14)', borderRadius: 2, overflow: 'hidden', marginBottom: 12 },
   progressFill: (pct) => ({
     height: '100%', width: `${pct}%`,
-    background: `linear-gradient(90deg, ${T.accent} 0%, rgba(160,120,255,0.9) 100%)`,
+    background: `linear-gradient(90deg, ${T.accent} 0%, rgba(140,124,192,0.9) 100%)`,
     borderRadius: 2, transition: 'width 0.4s ease',
     animation: 'progress-glow 2s ease-in-out infinite',
   }),
   logBox: {
-    background: 'rgba(0,0,0,0.5)', border: `1px solid rgba(100,50,200,0.2)`,
+    background: 'rgba(0,0,0,0.28)', border: `1px solid rgba(120,70,220,0.3)`,
     borderRadius: 8, padding: '10px 14px', maxHeight: 130, overflowY: 'auto',
     fontFamily: '"SF Mono", "Fira Code", "Courier New", monospace', fontSize: 11.5, lineHeight: 1.8,
   },
@@ -347,16 +359,16 @@ const S = {
   },
 
   footer: {
-    marginTop: 18, paddingTop: 14, borderTop: `1px solid rgba(100,50,200,0.2)`,
+    marginTop: 18, paddingTop: 14, borderTop: `1px solid rgba(112,76,196,0.45)`,
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
     fontSize: 11, color: T.textDim, letterSpacing: 0.3,
   },
   footerCode: {
     padding: '1px 6px', borderRadius: 4,
-    background: 'rgba(100,50,200,0.08)', border: '1px solid rgba(100,50,200,0.25)',
-    fontFamily: 'monospace', fontSize: 10.5, color: 'rgba(140,110,200,0.5)',
+    background: 'rgba(108,72,188,0.15)', border: '1px solid rgba(112,76,196,0.45)',
+    fontFamily: 'monospace', fontSize: 10.5, color: 'rgba(160,115,230,0.7)',
   },
-  footerDot: { color: 'rgba(120,120,130,0.3)' },
+  footerDot: { color: 'rgba(120,120,130,0.4)' },
 };
 
 // ── QR Modal ──────────────────────────────────────────────────────────────────
@@ -388,7 +400,7 @@ function QRModal({ museum, onClose }) {
           onClick={onClose}
           style={{
             padding: '7px 20px', borderRadius: 7, cursor: 'pointer', transition: 'all 0.15s',
-            background: 'rgba(100,50,200,0.18)', border: '1px solid rgba(120,65,220,0.4)',
+            background: 'rgba(105,68,192,0.18)', border: '1px solid rgba(118,80,204,0.4)',
             color: '#c0a8f0', fontSize: 12, fontWeight: 600,
           }}
         >
@@ -420,17 +432,20 @@ function MuseumTile({ museum, onOpen, onDelete, onQR }) {
         <button
           style={S.tileBtnIcon(qh, false)}
           onMouseEnter={() => setQh(true)} onMouseLeave={() => setQh(false)}
+          onFocus={() => setQh(true)} onBlur={() => setQh(false)}
           onClick={() => onQR(museum)} title="QR code"
         >QR</button>
         <button
           style={S.tileBtnEnter(eh)}
           onMouseEnter={() => setEh(true)} onMouseLeave={() => setEh(false)}
+          onFocus={() => setEh(true)} onBlur={() => setEh(false)}
           onClick={() => onOpen(museum)}
         >Enter →</button>
         {onDelete && (
           <button
             style={S.tileBtnIcon(dh, true)}
             onMouseEnter={() => setDh(true)} onMouseLeave={() => setDh(false)}
+            onFocus={() => setDh(true)} onBlur={() => setDh(false)}
             onClick={() => onDelete(museum.id)} title="Delete"
           >×</button>
         )}
@@ -447,6 +462,7 @@ function NewBtn({ onClick }) {
     <button
       style={S.btnNew(h)}
       onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      onFocus={() => setH(true)} onBlur={() => setH(false)}
       onClick={onClick}
     >
       + New
@@ -477,6 +493,8 @@ export function Lobby({ onMuseumReady }) {
   const [qrMuseum, setQrMuseum] = useState(null);
   const [search, setSearch]     = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
+  const [tabFocus, setTabFocus]       = useState(null);
+  const [backActive, setBackActive]   = useState(false);
 
   // Create-form state
   const [text, setText]           = useState('');
@@ -494,6 +512,11 @@ export function Lobby({ onMuseumReady }) {
   const [orcid, setOrcid]                 = useState('');
   const [orcidLoading, setOrcidLoading]   = useState(false);
   const [orcidError, setOrcidError]       = useState('');
+  const [orcidFocus, setOrcidFocus]       = useState(false);
+  const [fetchFocus, setFetchFocus]       = useState(false);
+  const [fetchHover, setFetchHover]       = useState(false);
+  const [generateFocus, setGenerateFocus] = useState(false);
+  const [generateHover, setGenerateHover] = useState(false);
   const fileRef   = useRef();
   const logEndRef = useRef();
 
@@ -637,18 +660,28 @@ export function Lobby({ onMuseumReady }) {
 
   // ── Home view (tabs, full screen) ────────────────────────────────────────
 
+  const focusStyle = (
+    <style>{`
+      .lobby-root button:focus-visible, .lobby-root input:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(144,96,224,0.32) !important;
+      }
+    `}</style>
+  );
+
   if (view === 'home') return (
-    <div style={S.root}>
+    <div style={S.root} className="lobby-root">
+      {focusStyle}
       <div style={{
         ...S.card,
         width: 'min(66.666vw, 960px)',
         height: 'calc(100vh - 32px)',
         margin: '32px auto 0',
         borderRadius: '12px 12px 0 0',
-        borderLeft:  '1px solid rgba(100,50,200,0.13)',
-        borderRight: '1px solid rgba(100,50,200,0.13)',
-        borderTop:   '1px solid rgba(100,50,200,0.13)',
-        boxShadow: '-20px 0 60px rgba(0,0,0,0.35), 20px 0 60px rgba(0,0,0,0.35)',
+        borderLeft:  '1px solid rgba(112,76,196,0.5)',
+        borderRight: '1px solid rgba(112,76,196,0.5)',
+        borderTop:   '1px solid rgba(112,76,196,0.5)',
+        boxShadow: '-12px 0 40px rgba(0,0,0,0.5), 12px 0 40px rgba(0,0,0,0.5), 0 0 0 0 transparent',
       }}>
         <div style={S.stripe} />
 
@@ -662,11 +695,21 @@ export function Lobby({ onMuseumReady }) {
 
         {/* Tab bar */}
         <div style={S.tabBar}>
-          <button style={S.tab(tab === 'gallery')} onClick={() => setTab('gallery')}>
+          <button
+            style={S.tab(tab === 'gallery', tabFocus === 'gallery')}
+            onClick={() => setTab('gallery')}
+            onMouseEnter={() => setTabFocus('gallery')} onMouseLeave={() => setTabFocus(null)}
+            onFocus={() => setTabFocus('gallery')} onBlur={() => setTabFocus(null)}
+          >
             Gallery
             {gallery?.length > 0 && <span style={S.tabCount(tab === 'gallery')}>{gallery.length}</span>}
           </button>
-          <button style={S.tab(tab === 'mine')} onClick={() => setTab('mine')}>
+          <button
+            style={S.tab(tab === 'mine', tabFocus === 'mine')}
+            onClick={() => setTab('mine')}
+            onMouseEnter={() => setTabFocus('mine')} onMouseLeave={() => setTabFocus(null)}
+            onFocus={() => setTabFocus('mine')} onBlur={() => setTabFocus(null)}
+          >
             My Museums
             {saved.length > 0 && <span style={S.tabCount(tab === 'mine')}>{saved.length}</span>}
           </button>
@@ -718,13 +761,19 @@ export function Lobby({ onMuseumReady }) {
   // ── Create view ───────────────────────────────────────────────────────────
 
   return (
-    <div style={S.root}>
+    <div style={S.root} className="lobby-root">
+      {focusStyle}
       <div style={S.card}>
         <div style={S.stripe} />
         <div style={S.createBody}>
          <div style={S.createInner}>
 
-          <button style={S.backBtn} onClick={() => { setView('home'); setPhase('idle'); setErrorMsg(''); }}>
+          <button
+            style={S.backBtn(backActive)}
+            onClick={() => { setView('home'); setPhase('idle'); setErrorMsg(''); }}
+            onMouseEnter={() => setBackActive(true)} onMouseLeave={() => setBackActive(false)}
+            onFocus={() => setBackActive(true)} onBlur={() => setBackActive(false)}
+          >
             ← Museums
           </button>
 
@@ -745,23 +794,36 @@ export function Lobby({ onMuseumReady }) {
                 onChange={e => { setOrcid(e.target.value); setOrcidError(''); }}
                 onKeyDown={e => e.key === 'Enter' && fetchOrcid()}
                 disabled={busy || orcidLoading}
+                onFocus={() => setOrcidFocus(true)}
+                onBlur={() => setOrcidFocus(false)}
                 style={{
                   flex: 1, padding: '9px 12px',
-                  background: 'rgba(0,0,0,0.4)', border: `1px solid ${T.border}`,
+                  background: 'rgba(0,0,0,0.4)',
+                  border: `1px solid ${orcidFocus ? T.borderFocus : T.border}`,
                   borderRadius: 8, color: T.text, fontSize: 13, outline: 'none',
                   fontFamily: 'monospace', letterSpacing: 1,
+                  boxShadow: orcidFocus ? `0 0 0 3px rgba(144,96,224,0.18)` : 'none',
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
                 }}
               />
               <button
                 onClick={fetchOrcid}
                 disabled={busy || orcidLoading || !orcid.trim()}
+                onMouseEnter={() => setFetchHover(true)} onMouseLeave={() => setFetchHover(false)}
+                onFocus={() => setFetchFocus(true)} onBlur={() => setFetchFocus(false)}
                 style={{
                   padding: '9px 14px', borderRadius: 8,
-                  background: orcid.trim() ? 'rgba(100,50,200,0.25)' : 'rgba(100,50,200,0.06)',
-                  border: `1px solid ${orcid.trim() ? 'rgba(120,65,220,0.5)' : T.border}`,
-                  color: orcid.trim() ? '#d4b8ff' : T.textDim,
+                  background: orcid.trim()
+                    ? fetchHover
+                      ? 'linear-gradient(135deg, rgba(128,88,210,0.45) 0%, rgba(98,60,182,0.45) 100%)'
+                      : 'linear-gradient(135deg, rgba(105,68,192,0.25) 0%, rgba(90,55,175,0.2) 100%)'
+                    : 'linear-gradient(135deg, rgba(105,68,192,0.06) 0%, rgba(90,55,168,0.04) 100%)',
+                  border: `1px solid ${fetchFocus ? T.borderFocus : fetchHover && orcid.trim() ? 'rgba(142,105,222,0.8)' : orcid.trim() ? 'rgba(118,80,204,0.5)' : T.border}`,
+                  color: orcid.trim() ? (fetchHover ? '#d0beff' : '#bda8f8') : T.textDim,
                   fontSize: 12, fontWeight: 600, cursor: orcid.trim() ? 'pointer' : 'default',
-                  whiteSpace: 'nowrap', transition: 'all 0.15s',
+                  whiteSpace: 'nowrap', outline: 'none',
+                  transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s',
+                  boxShadow: fetchFocus ? `0 0 0 3px rgba(144,96,224,0.18)` : '0 0 0 0 transparent',
                 }}
               >
                 {orcidLoading ? 'Loading…' : 'Fetch'}
@@ -815,9 +877,9 @@ export function Lobby({ onMuseumReady }) {
                   onClick={() => setSelectedSkin(sk.id)}
                   style={{
                     padding: '5px 12px', borderRadius: 7,
-                    background: selectedSkin === sk.id ? 'rgba(100,50,200,0.3)' : 'rgba(100,50,200,0.06)',
+                    background: selectedSkin === sk.id ? 'rgba(105,68,192,0.3)' : 'rgba(105,68,192,0.06)',
                     border: `1px solid ${selectedSkin === sk.id ? 'rgba(130,70,240,0.6)' : T.border}`,
-                    color: selectedSkin === sk.id ? '#d4b8ff' : T.textMuted,
+                    color: selectedSkin === sk.id ? '#bda8f8' : T.textMuted,
                     fontSize: 11.5, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
                     display: 'flex', alignItems: 'center', gap: 7,
                   }}
@@ -840,9 +902,9 @@ export function Lobby({ onMuseumReady }) {
                     onClick={() => setSelectedScene(sc.id)}
                     style={{
                       padding: '5px 12px', borderRadius: 7,
-                      background: selectedScene === sc.id ? 'rgba(100,50,200,0.3)' : 'rgba(100,50,200,0.06)',
+                      background: selectedScene === sc.id ? 'rgba(105,68,192,0.3)' : 'rgba(105,68,192,0.06)',
                       border: `1px solid ${selectedScene === sc.id ? 'rgba(130,70,240,0.6)' : T.border}`,
-                      color: selectedScene === sc.id ? '#d4b8ff' : T.textMuted,
+                      color: selectedScene === sc.id ? '#bda8f8' : T.textMuted,
                       fontSize: 11.5, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
                     }}
                   >
@@ -860,9 +922,24 @@ export function Lobby({ onMuseumReady }) {
 
           <div style={{ marginTop: 20 }}>
             <button
-              style={S.btnPrimary(busy || !text.trim())}
+              style={{
+                ...S.btnPrimary(busy || !text.trim()),
+                outline: 'none',
+                background: busy || !text.trim()
+                  ? 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.02) 100%)'
+                  : generateHover
+                    ? 'linear-gradient(135deg, rgba(148,102,230,0.7) 0%, rgba(112,72,202,0.7) 100%)'
+                    : 'linear-gradient(135deg, rgba(128,88,210,0.55) 0%, rgba(98,60,182,0.55) 100%)',
+                boxShadow: generateFocus && !(busy || !text.trim())
+                  ? `0 0 0 3px rgba(144,96,224,0.22), 0 4px 20px rgba(100,40,220,0.25), 0 1px 0 rgba(255,255,255,0.12) inset`
+                  : generateHover && !(busy || !text.trim())
+                    ? `0 4px 24px rgba(120,60,240,0.35), 0 1px 0 rgba(255,255,255,0.14) inset`
+                    : S.btnPrimary(busy || !text.trim()).boxShadow,
+              }}
               onClick={handleGenerate}
               disabled={busy || !text.trim()}
+              onMouseEnter={() => setGenerateHover(true)} onMouseLeave={() => setGenerateHover(false)}
+              onFocus={() => setGenerateFocus(true)} onBlur={() => setGenerateFocus(false)}
             >
               {phase === 'generating' ? 'Processing…' : 'Generate Museum'}
             </button>

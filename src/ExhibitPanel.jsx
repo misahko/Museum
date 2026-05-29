@@ -29,11 +29,11 @@ export function ExhibitPanel({ title, body, image, position = [0, 1.5, 0], rotat
     <group position={position} rotation={rotation}>
       <mesh scale={[W + 0.07, totalH + 0.07, 1]} position={[0, 0, -0.008]}>
         <planeGeometry />
-        <meshStandardMaterial color="#111111" />
+        <meshStandardMaterial color="#1e1e26" />
       </mesh>
       <mesh scale={[W, totalH, 1]}>
         <planeGeometry />
-        <meshStandardMaterial color="#1c1c1e" />
+        <meshStandardMaterial color="#2a2a36" />
       </mesh>
 
       <group position={[0, shift, 0]}>

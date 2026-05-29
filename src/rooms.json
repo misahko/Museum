@@ -27,8 +27,8 @@
     },
     {
       "id": "main-hall",
-      "wallColor": "#222235",
-      "accentColor": "#5a4a9a",
+      "wallColor": "#2e2e48",
+      "accentColor": "#7060b8",
       "spawn": [0, 1, 4],
       "portals": [
         { "targetRoom": "entrance", "label": "← Entrance",  "position": [ 4.5, 1.5, 0] },
@@ -88,8 +88,8 @@
     },
     {
       "id": "gallery",
-      "wallColor": "#22302a",
-      "accentColor": "#3a7a5a",
+      "wallColor": "#2c3e34",
+      "accentColor": "#4a9a70",
       "spawn": [0, 1, 4],
       "portals": [
         { "targetRoom": "main-hall", "label": "← Main Hall", "position": [4.5, 1.5, 0] }
