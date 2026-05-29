@@ -4,8 +4,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import { applyReplacements } from './replaceObjects';
-import { ExhibitPanel } from './ExhibitPanel';
-import { HoloPanel, StandPanel } from './HoloPanel';
+import { ExhibitPanel } from './exhibits/ExhibitPanel';
+import { HoloPanel, StandPanel } from './exhibits/HoloPanel';
 import { BoxRoom } from './BoxRoom';
 
 // ─── GLTF room ───────────────────────────────────────────────────────────────

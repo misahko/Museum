@@ -1,18 +1,24 @@
 import { Suspense, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Room } from './Room';
-import { Player } from './Player';
-import { Lobby } from './Lobby';
-import { HUD } from './HUD';
+import { Room } from './scene/Room';
+import { Player } from './scene/Player';
+import { Lobby } from './ui/Lobby';
+import { Auth } from './auth/Auth';
+import { HUD } from './ui/HUD';
+import { authService } from './auth/authService';
 
 const STORAGE_KEY = 'museum_app_v1';
 
 export default function App() {
+  const [user, setUser]                     = useState(() => authService.getUser());
   const [generatedRooms, setGeneratedRooms] = useState(null);
   const [currentRoomId, setCurrentRoomId]   = useState(null);
   const [museumMeta, setMuseumMeta]         = useState(null);
   const [urlError, setUrlError]             = useState('');
+
+  function handleAuth(u)    { setUser(u); }
+  function handleLogout()   { authService.logout(); setUser(null); }
 
   function handleMuseumReady({ rooms, name, id }) {
     if (!rooms?.length) return;
@@ -73,7 +79,7 @@ export default function App() {
             >✕</button>
           </div>
         )}
-        <Lobby onMuseumReady={handleMuseumReady} />
+        <Lobby onMuseumReady={handleMuseumReady} user={user} onAuth={handleAuth} onLogout={handleLogout} />
       </>
     );
   }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { incrementVisits, getVisits, addEntry, getEntries } from './museumStore';
+import { incrementVisits, getVisits, addEntry, getEntries } from '../services/museumStore';
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 
