@@ -7,8 +7,8 @@ import { Lobby } from './ui/Lobby';
 import { Auth } from './auth/Auth';
 import { HUD } from './ui/HUD';
 import { authService } from './auth/authService';
+import { museumService } from './services/museumService';
 
-const STORAGE_KEY = 'museum_app_v1';
 
 export default function App() {
   const [user, setUser]                     = useState(() => authService.getUser());
@@ -43,22 +43,10 @@ export default function App() {
     const mid = new URLSearchParams(window.location.search).get('m');
     if (!mid) return;
 
-    // 1. Try localStorage
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-      const m = saved.find(m => m.id === mid);
-      if (m) { handleMuseumReady({ rooms: m.rooms, name: m.name, id: m.id }); return; }
-    } catch {}
-
-    // 2. Try gallery API
-    fetch('/api/museums')
-      .then(r => r.ok ? r.json() : [])
-      .then(list => {
-        const m = Array.isArray(list) && list.find(m => m.id === mid);
-        if (m) handleMuseumReady({ rooms: m.rooms, name: m.name, id: m.id });
-        else setUrlError(`Museum not found on this device. The QR code may belong to a different browser or device.`);
-      })
-      .catch(() => setUrlError(`Museum not found on this device.`));
+    museumService.getMuseumById(mid).then(m => {
+      if (m) handleMuseumReady({ rooms: m.rooms, name: m.name, id: m.id });
+      else setUrlError('Museum not found on this device. The QR code may belong to a different browser or device.');
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!generatedRooms) {
