@@ -70,4 +70,46 @@ export const authService = {
   logout() {
     sessionStorage.removeItem(SESSION_KEY);
   },
+
+  /**
+   * Update display name.
+   * Backend: PATCH /api/users/:id  { name }
+   */
+  async updateName(userId, newName) {
+    const users = loadUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx === -1) throw new Error('User not found.');
+    users[idx].name = newName.trim();
+    saveUsers(users);
+    const session = { id: users[idx].id, name: users[idx].name, email: users[idx].email };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return session;
+  },
+
+  /**
+   * Change password — requires current password for verification.
+   * Backend: POST /api/users/:id/change-password  { currentPassword, newPassword }
+   */
+  async updatePassword(userId, currentPassword, newPassword) {
+    const users = loadUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx === -1) throw new Error('User not found.');
+    if (users[idx].password !== currentPassword) throw new Error('Current password is incorrect.');
+    if (newPassword.length < 6) throw new Error('New password must be at least 6 characters.');
+    users[idx].password = newPassword;
+    saveUsers(users);
+  },
+
+  /**
+   * Permanently delete account — requires password confirmation.
+   * Backend: DELETE /api/users/:id  { password }
+   */
+  async deleteAccount(userId, password) {
+    const users = loadUsers();
+    const user = users.find(u => u.id === userId);
+    if (!user) throw new Error('User not found.');
+    if (user.password !== password) throw new Error('Incorrect password.');
+    saveUsers(users.filter(u => u.id !== userId));
+    sessionStorage.removeItem(SESSION_KEY);
+  },
 };

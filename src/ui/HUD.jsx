@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { incrementVisits, getVisits, addEntry, getEntries } from '../services/museumStore';
+import { recordVisit, getVisits, addEntry, getEntries } from '../services/museumStore';
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 
@@ -287,9 +287,9 @@ function GuestbookPanel({ museumId }) {
 
 // ── HUD root ──────────────────────────────────────────────────────────────────
 
-export function HUD({ rooms, currentRoomId, onTeleport, museumName, museumId, onExit }) {
+export function HUD({ rooms, currentRoomId, onTeleport, museumName, museumId, fromGallery, onExit }) {
   const [panel, setPanel] = useState(null); // 'map' | 'search' | 'qr' | 'book'
-  const [visits]          = useState(() => incrementVisits(museumId));
+  const [visits]          = useState(() => fromGallery ? recordVisit(museumId) : getVisits(museumId));
 
   const toggle = (name) => setPanel(p => p === name ? null : name);
 

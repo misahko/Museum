@@ -8,6 +8,7 @@ import { validateContent } from '../services/contentValidator';
 import { getVisits } from '../services/museumStore';
 import { SKINS } from '../services/skins';
 import { museumService } from '../services/museumService';
+import { ProfileModal } from './ProfileModal';
 
 function deriveName(text) {
   const first = text.trim().split('\n')[0].trim();
@@ -653,6 +654,7 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
   const [tabFocus, setTabFocus]       = useState(null);
   const [backActive, setBackActive]   = useState(false);
   const [showAuth, setShowAuth]       = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   // Create-form state
   const [text, setText]           = useState('');
@@ -754,8 +756,8 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
     setSaved(prev => prev.map(m => m.id === updatedMuseum.id ? updatedMuseum : m));
   }
 
-  function handleOpen(museum) {
-    onMuseumReady({ rooms: museum.rooms, name: museum.name, id: museum.id });
+  function handleOpen(museum, fromGallery = false) {
+    onMuseumReady({ rooms: museum.rooms, name: museum.name, id: museum.id, fromGallery });
   }
 
   // File processing
@@ -869,20 +871,28 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
             <span style={S.appName}>Research Museum</span>
           </div>
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 12, color: T.textMuted }}>{user.name}</span>
-              <button
-                onClick={onLogout}
-                style={{
-                  padding: '5px 12px', borderRadius: 7, cursor: 'pointer',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                  color: T.textDim, fontSize: 11.5, fontWeight: 600,
-                  transition: 'background 0.15s, border-color 0.15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-              >Sign out</button>
-            </div>
+            <button
+              onClick={() => setShowProfile(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '0', borderRadius: 8, cursor: 'pointer',
+                background: 'none', border: 'none',
+                color: 'rgba(190,188,210,0.65)', fontSize: 11, fontWeight: 600,
+                letterSpacing: 2.5, textTransform: 'uppercase',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(220,218,240,0.9)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(190,188,210,0.65)'}
+            >
+              <span>{user.name}</span>
+              <div style={{
+                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                background: `hsl(${[...user.name].reduce((h,c) => c.charCodeAt(0) + ((h<<5)-h), 0) % 360}, 45%, 38%)`,
+                border: '1px solid rgba(255,255,255,0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: 0.5,
+              }}>{user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)}</div>
+            </button>
           ) : (
             <button
               onClick={() => setShowAuth(true)}
@@ -943,7 +953,7 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
               const filtered = gallery.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()));
               if (gallery.length === 0) return <EmptyState text="No museums in the gallery." hint="Check back later." />;
               if (filtered.length === 0) return <EmptyState text="No results." hint={`No gallery museums match "${search}".`} />;
-              return <div style={S.tileGrid}>{filtered.map(m => <MuseumTile key={m.id} museum={m} onOpen={handleOpen} onQR={setQrMuseum} userId={null} />)}</div>;
+              return <div style={S.tileGrid}>{filtered.map(m => <MuseumTile key={m.id} museum={m} onOpen={m => handleOpen(m, true)} onQR={setQrMuseum} userId={null} />)}</div>;
             })()}
 
             {tab === 'mine' && (() => {
@@ -978,9 +988,14 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
 
       {qrMuseum && <QRModal museum={qrMuseum} onClose={() => setQrMuseum(null)} />}
       {showAuth && (
-        <Auth
-          onAuth={u => { onAuth(u); setShowAuth(false); }}
-          onClose={() => setShowAuth(false)}
+        <Auth onAuth={u => { onAuth(u); setShowAuth(false); }} onClose={() => setShowAuth(false)} />
+      )}
+      {showProfile && user && (
+        <ProfileModal
+          user={user}
+          onUserUpdate={u => { onAuth(u); }}
+          onLogout={() => { onLogout(); setShowProfile(false); }}
+          onClose={() => setShowProfile(false)}
         />
       )}
     </div>

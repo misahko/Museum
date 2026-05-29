@@ -20,11 +20,11 @@ export default function App() {
   function handleAuth(u)    { setUser(u); }
   function handleLogout()   { authService.logout(); setUser(null); }
 
-  function handleMuseumReady({ rooms, name, id }) {
+  function handleMuseumReady({ rooms, name, id, fromGallery = false }) {
     if (!rooms?.length) return;
     setGeneratedRooms(rooms);
     setCurrentRoomId(rooms[0].id);
-    setMuseumMeta({ name: name ?? 'Museum', id: id ?? rooms[0].id });
+    setMuseumMeta({ name: name ?? 'Museum', id: id ?? rooms[0].id, fromGallery });
     if (window.location.search) history.replaceState({}, '', window.location.pathname);
   }
 
@@ -106,6 +106,7 @@ export default function App() {
         onTeleport={handleTeleport}
         museumName={museumMeta?.name ?? 'Museum'}
         museumId={museumId}
+        fromGallery={museumMeta?.fromGallery ?? false}
         onExit={() => handleTeleport('lobby')}
       />
     </div>
