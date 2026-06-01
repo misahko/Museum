@@ -5,9 +5,19 @@ import { extractTextFromPDF } from '../services/pdfParser';
 import { sortAndStructureHistory, fileToBase64 } from '../services/llmSorting';
 import { generateMuseumRooms } from '../services/museumGenerator';
 import { validateContent } from '../services/contentValidator';
-import { getVisits } from '../services/museumStore';
+import { getVisits, getRecent, removeRecent, clearRecent } from '../services/museumStore';
 import { SKINS } from '../services/skins';
 import { museumService } from '../services/museumService';
+import { ProfileModal } from './ProfileModal';
+
+export const MUSEUM_TAGS = ['AI', 'Biology', 'Physics', 'History', 'Art', 'Computer Science', 'Mathematics', 'Chemistry', 'Other'];
+
+const SORT_OPTIONS = [
+  { value: 'newest',  label: 'Newest' },
+  { value: 'oldest',  label: 'Oldest' },
+  { value: 'popular', label: 'Most visited' },
+  { value: 'az',      label: 'A → Z' },
+];
 
 function deriveName(text) {
   const first = text.trim().split('\n')[0].trim();
@@ -22,10 +32,10 @@ function fmtDate(iso) {
 
 const T = {
   accent:      '#9060e0',
-  accentDim:   'rgba(134,95,212,0.7)',
+  accentDim:   'rgba(134,95,212,0.5)',
   accentGlow:  'rgba(114,78,200,0.2)',
   surface:     'rgba(26,26,30,0.98)',
-  border:      'rgba(112,76,196,0.5)',
+  border:      'rgba(112,76,196,0.55)',
   borderHover: 'rgba(142,105,222,0.75)',
   borderFocus: 'rgba(142,105,224,0.85)',
   borderSection: 'rgba(255,255,255,0.07)',
@@ -409,99 +419,16 @@ function QRModal({ museum, onClose }) {
 
 // ── Versions modal ────────────────────────────────────────────────────────────
 
-function VersionsModal({ museum, userId, onRestore, onClose }) {
-  const [versions, setVersions] = useState(museum.versions ?? []);
-  const [busy, setBusy] = useState(false);
-
-  async function handleSave() {
-    setBusy(true);
-    const v = await museumService.saveVersion(userId, museum.id);
-    setVersions(prev => [v, ...prev]);
-    setBusy(false);
-  }
-
-  async function handleRestore(versionId) {
-    setBusy(true);
-    const updated = await museumService.restoreVersion(userId, museum.id, versionId);
-    onRestore(updated);
-    onClose();
-  }
-
-  async function handleDelete(versionId) {
-    await museumService.deleteVersion(userId, museum.id, versionId);
-    setVersions(prev => prev.filter(v => v.id !== versionId));
-  }
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.6)',
-      backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{
-        width: 420, background: '#1c1c24', border: '1px solid rgba(112,76,196,0.55)',
-        borderRadius: 14, padding: '24px 28px', boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
-        fontFamily: '"Segoe UI", system-ui, sans-serif',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#dcdce6' }}>Version history</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: T.textDim, cursor: 'pointer', fontSize: 18 }}>×</button>
-        </div>
-        <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 16 }}>{museum.name}</div>
-
-        <button
-          onClick={handleSave} disabled={busy}
-          style={{
-            width: '100%', padding: '8px 0', marginBottom: 16, borderRadius: 8,
-            background: 'linear-gradient(135deg, rgba(128,88,210,0.35) 0%, rgba(98,60,182,0.35) 100%)',
-            border: '1px solid rgba(130,88,215,0.55)', color: '#cbbff5',
-            fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer',
-          }}
-        >{busy ? 'Saving…' : '+ Save current version'}</button>
-
-        {versions.length === 0
-          ? <div style={{ textAlign: 'center', color: T.textDim, fontSize: 12, padding: '20px 0' }}>No versions saved yet.</div>
-          : <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto' }}>
-              {versions.map(v => (
-                <div key={v.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(112,76,196,0.3)',
-                  borderRadius: 8, padding: '8px 12px',
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, color: '#d0d0d8' }}>{v.label}</div>
-                    <div style={{ fontSize: 11, color: T.textDim, marginTop: 2 }}>{fmtDate(v.savedAt)}</div>
-                  </div>
-                  <button onClick={() => handleRestore(v.id)} disabled={busy}
-                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                      background: 'rgba(128,88,210,0.2)', border: '1px solid rgba(130,88,215,0.45)', color: '#cbbff5' }}>
-                    Restore
-                  </button>
-                  <button onClick={() => handleDelete(v.id)} disabled={busy}
-                    style={{ padding: '4px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-                      background: 'transparent', border: '1px solid rgba(180,40,60,0.3)', color: T.textDim }}>
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-        }
-      </div>
-    </div>
-  );
-}
-
 // ── Museum tile ───────────────────────────────────────────────────────────────
 
-function MuseumTile({ museum, userId, onOpen, onDelete, onQR, onRename, onPublish, onVersionRestore }) {
+function MuseumTile({ museum, userId, onOpen, onDelete, onQR, onRename, onPublish }) {
   const [h, setH]         = useState(false);
   const [eh, setEh]       = useState(false);
   const [qh, setQh]       = useState(false);
   const [dh, setDh]       = useState(false);
   const [ph, setPh]       = useState(false);
-  const [hh, setHh]       = useState(false);
   const [editing, setEditing] = useState(false);
   const [nameVal, setNameVal] = useState(museum.name);
-  const [showVersions, setShowVersions] = useState(false);
   const visits = getVisits(museum.id);
   const inputRef = useRef();
 
@@ -552,38 +479,48 @@ function MuseumTile({ museum, userId, onOpen, onDelete, onQR, onRename, onPublis
           }}>{museum.published ? 'Public' : 'Private'}</span>
         )}
       </div>
+      {(museum.tags ?? []).length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+          {museum.tags.map(tag => (
+            <span key={tag} style={{
+              padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600,
+              background: 'rgba(134,95,212,0.18)',
+              border: '1px solid rgba(112,76,196,0.55)',
+              color: T.textMuted,
+            }}>{tag}</span>
+          ))}
+        </div>
+      )}
 
-      {/* Actions row 1 — owner only */}
-      {(onPublish || onVersionRestore) && (
+      {/* Actions row 1 — owner only: publish + QR */}
+      {onPublish && (
         <div style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
-          {onPublish && (
-            <button
-              style={{ ...S.tileBtnIcon(ph, false), flex: 1, width: 'auto', fontSize: 10.5 }}
-              onMouseEnter={() => setPh(true)} onMouseLeave={() => setPh(false)}
-              onFocus={() => setPh(true)} onBlur={() => setPh(false)}
-              onClick={() => onPublish(museum.id, !museum.published)}
-              title={museum.published ? 'Make private' : 'Publish to gallery'}
-            >{museum.published ? 'Unpublish' : 'Publish'}</button>
-          )}
-          {onVersionRestore && (
-            <button
-              style={S.tileBtnIcon(hh, false)}
-              onMouseEnter={() => setHh(true)} onMouseLeave={() => setHh(false)}
-              onFocus={() => setHh(true)} onBlur={() => setHh(false)}
-              onClick={() => setShowVersions(true)} title="Version history"
-            >⟳</button>
-          )}
+          <button
+            style={{ ...S.tileBtnIcon(ph, false), flex: 1, width: 'auto', fontSize: 10.5 }}
+            onMouseEnter={() => setPh(true)} onMouseLeave={() => setPh(false)}
+            onFocus={() => setPh(true)} onBlur={() => setPh(false)}
+            onClick={() => onPublish(museum.id, !museum.published)}
+            title={museum.published ? 'Make private' : 'Publish to gallery'}
+          >{museum.published ? 'Unpublish' : 'Publish'}</button>
+          <button
+            style={S.tileBtnIcon(qh, false)}
+            onMouseEnter={() => setQh(true)} onMouseLeave={() => setQh(false)}
+            onFocus={() => setQh(true)} onBlur={() => setQh(false)}
+            onClick={() => onQR(museum)} title="QR code"
+          >QR</button>
         </div>
       )}
 
       {/* Actions row 2 */}
       <div style={S.tileActions}>
-        <button
-          style={S.tileBtnIcon(qh, false)}
-          onMouseEnter={() => setQh(true)} onMouseLeave={() => setQh(false)}
-          onFocus={() => setQh(true)} onBlur={() => setQh(false)}
-          onClick={() => onQR(museum)} title="QR code"
-        >QR</button>
+        {!onPublish && (
+          <button
+            style={S.tileBtnIcon(qh, false)}
+            onMouseEnter={() => setQh(true)} onMouseLeave={() => setQh(false)}
+            onFocus={() => setQh(true)} onBlur={() => setQh(false)}
+            onClick={() => onQR(museum)} title="QR code"
+          >QR</button>
+        )}
         <button
           style={S.tileBtnEnter(eh)}
           onMouseEnter={() => setEh(true)} onMouseLeave={() => setEh(false)}
@@ -599,14 +536,65 @@ function MuseumTile({ museum, userId, onOpen, onDelete, onQR, onRename, onPublis
           >×</button>
         )}
       </div>
+    </div>
+  );
+}
 
-      {showVersions && (
-        <VersionsModal
-          museum={museum} userId={userId}
-          onRestore={m => onVersionRestore(m)}
-          onClose={() => setShowVersions(false)}
-        />
-      )}
+// ── New button ────────────────────────────────────────────────────────────────
+
+// ── Recent row ────────────────────────────────────────────────────────────────
+
+function RecentRow({ entry, onOpen, onRemove }) {
+  const [h, setH]   = useState(false);
+  const [eh, setEh] = useState(false);
+  const [dh, setDh] = useState(false);
+
+  function fmtRelative(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    const hr = Math.floor(m / 60);
+    const d = Math.floor(hr / 24);
+    if (m < 1)   return 'just now';
+    if (m < 60)  return `${m}m ago`;
+    if (hr < 24) return `${hr}h ago`;
+    if (d < 7)   return `${d}d ago`;
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+
+  return (
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '10px 14px', borderRadius: 10,
+        background: h
+          ? 'linear-gradient(160deg, rgba(114,78,200,0.12) 0%, rgba(78,68,140,0.07) 100%)'
+          : 'linear-gradient(160deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+        border: `1px solid ${h ? 'rgba(142,105,222,0.5)' : 'rgba(112,76,196,0.3)'}`,
+        transition: 'background 0.15s, border-color 0.15s',
+      }}
+      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#d8d8dc',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {entry.name}
+        </div>
+        <div style={{ fontSize: 11, color: T.textDim, marginTop: 2 }}>
+          {fmtRelative(entry.visitedAt)}
+        </div>
+      </div>
+      <button
+        style={S.tileBtnEnter(eh)}
+        onMouseEnter={() => setEh(true)} onMouseLeave={() => setEh(false)}
+        onFocus={() => setEh(true)} onBlur={() => setEh(false)}
+        onClick={onOpen}
+      >Enter →</button>
+      <button
+        style={S.tileBtnIcon(dh, true)}
+        onMouseEnter={() => setDh(true)} onMouseLeave={() => setDh(false)}
+        onFocus={() => setDh(true)} onBlur={() => setDh(false)}
+        onClick={onRemove} title="Remove from history"
+      >×</button>
     </div>
   );
 }
@@ -653,8 +641,13 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
   const [tabFocus, setTabFocus]       = useState(null);
   const [backActive, setBackActive]   = useState(false);
   const [showAuth, setShowAuth]       = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [filterTags, setFilterTags]   = useState([]);
+  const [sortBy, setSortBy]           = useState('newest');
+  const [recent, setRecent]           = useState(() => getRecent());
 
   // Create-form state
+  const [selectedTags, setSelectedTags] = useState([]);
   const [text, setText]           = useState('');
   const [pdfFiles, setPdfFiles]   = useState([]);
   const [pdfNames, setPdfNames]   = useState([]);
@@ -754,8 +747,8 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
     setSaved(prev => prev.map(m => m.id === updatedMuseum.id ? updatedMuseum : m));
   }
 
-  function handleOpen(museum) {
-    onMuseumReady({ rooms: museum.rooms, name: museum.name, id: museum.id });
+  function handleOpen(museum, fromGallery = false) {
+    onMuseumReady({ rooms: museum.rooms, name: museum.name, id: museum.id, fromGallery });
   }
 
   // File processing
@@ -819,7 +812,7 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
       }
 
       const name = deriveName(trimmed);
-      const entry = await museumService.create(user.id, { name, rooms, roomCount: rooms.length });
+      const entry = await museumService.create(user.id, { name, rooms, roomCount: rooms.length, tags: selectedTags });
       setSaved(prev => [entry, ...prev]);
       setTimeout(() => onMuseumReady({ rooms: entry.rooms, name: entry.name, id: entry.id }), 400);
     } catch (e) { setErrorMsg(e.message); setPhase('error'); }
@@ -869,20 +862,28 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
             <span style={S.appName}>Research Museum</span>
           </div>
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 12, color: T.textMuted }}>{user.name}</span>
-              <button
-                onClick={onLogout}
-                style={{
-                  padding: '5px 12px', borderRadius: 7, cursor: 'pointer',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                  color: T.textDim, fontSize: 11.5, fontWeight: 600,
-                  transition: 'background 0.15s, border-color 0.15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-              >Sign out</button>
-            </div>
+            <button
+              onClick={() => setShowProfile(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '0', borderRadius: 8, cursor: 'pointer',
+                background: 'none', border: 'none',
+                color: 'rgba(190,188,210,0.65)', fontSize: 11, fontWeight: 600,
+                letterSpacing: 2.5, textTransform: 'uppercase',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(220,218,240,0.9)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(190,188,210,0.65)'}
+            >
+              <span>{user.name}</span>
+              <div style={{
+                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                background: `hsl(${[...user.name].reduce((h,c) => c.charCodeAt(0) + ((h<<5)-h), 0) % 360}, 45%, 38%)`,
+                border: '1px solid rgba(255,255,255,0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: 0.5,
+              }}>{user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)}</div>
+            </button>
           ) : (
             <button
               onClick={() => setShowAuth(true)}
@@ -919,6 +920,15 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
             My Museums
             {user && saved.length > 0 && <span style={S.tabCount(tab === 'mine')}>{saved.length}</span>}
           </button>
+          <button
+            style={S.tab(tab === 'recent', tabFocus === 'recent')}
+            onClick={() => { setTab('recent'); setRecent(getRecent()); }}
+            onMouseEnter={() => setTabFocus('recent')} onMouseLeave={() => setTabFocus(null)}
+            onFocus={() => setTabFocus('recent')} onBlur={() => setTabFocus(null)}
+          >
+            Recent
+            {recent.length > 0 && <span style={S.tabCount(tab === 'recent')}>{recent.length}</span>}
+          </button>
         </div>
 
         {/* Panel content */}
@@ -937,13 +947,57 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
             {tab === 'mine' && user && <NewBtn onClick={() => setView('create')} />}
           </div>
 
+          {/* Tag filter + sort — gallery only */}
+          {tab === 'gallery' && (
+            <div style={{ marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+                {MUSEUM_TAGS.map(tag => {
+                  const active = filterTags.includes(tag);
+                  return (
+                    <button key={tag} onClick={() => setFilterTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag])}
+                      style={{
+                        padding: '3px 11px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                        cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s',
+                        background: active ? 'rgba(134,95,212,0.35)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${active ? '#9060e0' : 'rgba(255,255,255,0.1)'}`,
+                        color: active ? '#fff' : T.textDim, outline: 'none',
+                      }}
+                    >{tag}</button>
+                  );
+                })}
+                {filterTags.length > 0 && (
+                  <button onClick={() => setFilterTags([])}
+                    style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                      background: 'none', border: '1px solid rgba(255,255,255,0.08)', color: T.textDim, outline: 'none' }}
+                  >✕ Clear</button>
+                )}
+                <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                  style={{
+                    marginLeft: 'auto', padding: '4px 10px', borderRadius: 7,
+                    background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(112,76,196,0.55)',
+                    color: T.textMuted, fontSize: 11.5, cursor: 'pointer', outline: 'none',
+                    fontFamily: 'inherit',
+                  }}>
+                  {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+
           <div style={S.panelScroll}>
             {tab === 'gallery' && (() => {
               if (gallery === null) return <div style={S.loadingRow}>Loading…</div>;
-              const filtered = gallery.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()));
+              let filtered = gallery.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()));
+              if (filterTags.length > 0) filtered = filtered.filter(m => filterTags.some(t => (m.tags ?? []).includes(t)));
+              filtered = [...filtered].sort((a, b) => {
+                if (sortBy === 'oldest')  return new Date(a.createdAt) - new Date(b.createdAt);
+                if (sortBy === 'popular') return (b.visits ?? getVisits(b.id)) - (a.visits ?? getVisits(a.id));
+                if (sortBy === 'az')      return a.name.localeCompare(b.name);
+                return new Date(b.createdAt) - new Date(a.createdAt); // newest
+              });
               if (gallery.length === 0) return <EmptyState text="No museums in the gallery." hint="Check back later." />;
-              if (filtered.length === 0) return <EmptyState text="No results." hint={`No gallery museums match "${search}".`} />;
-              return <div style={S.tileGrid}>{filtered.map(m => <MuseumTile key={m.id} museum={m} onOpen={handleOpen} onQR={setQrMuseum} userId={null} />)}</div>;
+              if (filtered.length === 0) return <EmptyState text="No results." hint="Try different search or tags." />;
+              return <div style={S.tileGrid}>{filtered.map(m => <MuseumTile key={m.id} museum={m} onOpen={m => handleOpen(m, true)} onQR={setQrMuseum} userId={null} />)}</div>;
             })()}
 
             {tab === 'mine' && (() => {
@@ -966,7 +1020,42 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
               const filtered = saved.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()));
               if (saved.length === 0) return <EmptyState text="No personal museums yet." hint="Click «+ New» to generate your first museum." />;
               if (filtered.length === 0) return <EmptyState text="No results." hint={`No museums match "${search}".`} />;
-              return <div style={S.tileGrid}>{filtered.map(m => <MuseumTile key={m.id} museum={m} userId={user.id} onOpen={handleOpen} onDelete={handleDelete} onQR={setQrMuseum} onRename={handleRename} onPublish={handlePublish} onVersionRestore={handleVersionRestore} />)}</div>;
+              return <div style={S.tileGrid}>{filtered.map(m => <MuseumTile key={m.id} museum={m} userId={user.id} onOpen={handleOpen} onDelete={handleDelete} onQR={setQrMuseum} onRename={handleRename} onPublish={handlePublish} />)}</div>;
+            })()}
+
+            {tab === 'recent' && (() => {
+              const filtered = recent.filter(e => e.name?.toLowerCase().includes(search.toLowerCase()));
+              if (recent.length === 0) return (
+                <div style={{ ...S.emptyState, paddingTop: 40 }}>
+                  <p style={S.emptyText}>No recently visited museums.</p>
+                  <p style={S.emptyHint}>Museums you enter will appear here.</p>
+                </div>
+              );
+              if (filtered.length === 0) return <EmptyState text="No results." hint={`Nothing matches "${search}".`} />;
+              return (
+                <div>
+                  {filtered.length > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+                      <button onClick={() => { clearRecent(); setRecent([]); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11.5,
+                          color: T.textDim, transition: 'color 0.15s', padding: '2px 0' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#c06878'}
+                        onMouseLeave={e => e.currentTarget.style.color = T.textDim}
+                      >Clear all</button>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {filtered.map(entry => (
+                      <RecentRow
+                        key={entry.id}
+                        entry={entry}
+                        onOpen={() => museumService.getMuseumById(entry.id).then(m => m && handleOpen(m))}
+                        onRemove={() => { removeRecent(entry.id); setRecent(getRecent()); }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
             })()}
           </div>
         </div>
@@ -978,9 +1067,14 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
 
       {qrMuseum && <QRModal museum={qrMuseum} onClose={() => setQrMuseum(null)} />}
       {showAuth && (
-        <Auth
-          onAuth={u => { onAuth(u); setShowAuth(false); }}
-          onClose={() => setShowAuth(false)}
+        <Auth onAuth={u => { onAuth(u); setShowAuth(false); }} onClose={() => setShowAuth(false)} />
+      )}
+      {showProfile && user && (
+        <ProfileModal
+          user={user}
+          onUserUpdate={u => { onAuth(u); }}
+          onLogout={() => { onLogout(); setShowProfile(false); }}
+          onClose={() => setShowProfile(false)}
         />
       )}
     </div>
@@ -1147,6 +1241,28 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
               )}
             </div>
           )}
+
+          {/* Tags */}
+          <div style={{ marginTop: 14 }}>
+            <div style={S.label}>Tags</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {MUSEUM_TAGS.map(tag => {
+                const active = selectedTags.includes(tag);
+                return (
+                  <button key={tag} onClick={() => setSelectedTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag])}
+                    style={{
+                      padding: '4px 12px', borderRadius: 20, fontSize: 11.5, fontWeight: 600,
+                      cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s',
+                      background: active ? 'rgba(134,95,212,0.35)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${active ? '#9060e0' : 'rgba(255,255,255,0.1)'}`,
+                      color: active ? '#fff' : T.textMuted,
+                      outline: 'none',
+                    }}
+                  >{tag}</button>
+                );
+              })}
+            </div>
+          </div>
 
           <div style={{ marginTop: 20 }}>
             <button

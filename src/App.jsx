@@ -7,8 +7,8 @@ import { Lobby } from './ui/Lobby';
 import { Auth } from './auth/Auth';
 import { HUD } from './ui/HUD';
 import { authService } from './auth/authService';
+import { museumService } from './services/museumService';
 
-const STORAGE_KEY = 'museum_app_v1';
 
 export default function App() {
   const [user, setUser]                     = useState(() => authService.getUser());
@@ -20,11 +20,11 @@ export default function App() {
   function handleAuth(u)    { setUser(u); }
   function handleLogout()   { authService.logout(); setUser(null); }
 
-  function handleMuseumReady({ rooms, name, id }) {
+  function handleMuseumReady({ rooms, name, id, fromGallery = false }) {
     if (!rooms?.length) return;
     setGeneratedRooms(rooms);
     setCurrentRoomId(rooms[0].id);
-    setMuseumMeta({ name: name ?? 'Museum', id: id ?? rooms[0].id });
+    setMuseumMeta({ name: name ?? 'Museum', id: id ?? rooms[0].id, fromGallery });
     if (window.location.search) history.replaceState({}, '', window.location.pathname);
   }
 
@@ -43,22 +43,10 @@ export default function App() {
     const mid = new URLSearchParams(window.location.search).get('m');
     if (!mid) return;
 
-    // 1. Try localStorage
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-      const m = saved.find(m => m.id === mid);
-      if (m) { handleMuseumReady({ rooms: m.rooms, name: m.name, id: m.id }); return; }
-    } catch {}
-
-    // 2. Try gallery API
-    fetch('/api/museums')
-      .then(r => r.ok ? r.json() : [])
-      .then(list => {
-        const m = Array.isArray(list) && list.find(m => m.id === mid);
-        if (m) handleMuseumReady({ rooms: m.rooms, name: m.name, id: m.id });
-        else setUrlError(`Museum not found on this device. The QR code may belong to a different browser or device.`);
-      })
-      .catch(() => setUrlError(`Museum not found on this device.`));
+    museumService.getMuseumById(mid).then(m => {
+      if (m) handleMuseumReady({ rooms: m.rooms, name: m.name, id: m.id });
+      else setUrlError('Museum not found on this device. The QR code may belong to a different browser or device.');
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!generatedRooms) {
@@ -106,6 +94,7 @@ export default function App() {
         onTeleport={handleTeleport}
         museumName={museumMeta?.name ?? 'Museum'}
         museumId={museumId}
+        fromGallery={museumMeta?.fromGallery ?? false}
         onExit={() => handleTeleport('lobby')}
       />
     </div>

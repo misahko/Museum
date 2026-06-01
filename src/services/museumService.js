@@ -75,13 +75,14 @@ export const museumService = {
   // ── Write ─────────────────────────────────────────────────────────────────
 
   /** Create and persist a new museum for the user. Returns the saved museum. */
-  async create(userId, { name, rooms, roomCount }) {
+  async create(userId, { name, rooms, roomCount, tags }) {
     const data = load();
     const museum = {
       id: crypto.randomUUID(),
       name,
       rooms,
       roomCount: roomCount ?? rooms.length,
+      tags: tags ?? [],
       published: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { incrementVisits, getVisits, addEntry, getEntries } from '../services/museumStore';
+import { recordVisit, getVisits, recordRecent } from '../services/museumStore';
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 
@@ -32,12 +32,13 @@ const panel = (extra = {}) => ({
 
 const hBtn = (active, extra = {}) => ({
   padding: '5px 12px',
-  background: active ? 'rgba(100,50,200,0.35)' : 'rgba(100,50,200,0.08)',
-  border: `1px solid ${active ? C.borderHi : C.border}`,
+  background: active ? 'rgba(100,50,200,0.25)' : 'rgba(100,50,200,0.08)',
+  border: `1px solid ${active ? 'rgba(140,90,240,0.65)' : C.border}`,
   borderRadius: 7,
   color: active ? '#d4b8ff' : 'rgba(160,130,220,0.65)',
   fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.3,
-  transition: 'all 0.15s', pointerEvents: 'auto',
+  transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
+  pointerEvents: 'auto', outline: 'none',
   ...extra,
 });
 
@@ -194,102 +195,14 @@ function QRPanel({ museumName, museumId }) {
 
 // ── Guestbook ─────────────────────────────────────────────────────────────────
 
-function GuestbookPanel({ museumId }) {
-  const [entries, setEntries] = useState(() => getEntries(museumId));
-  const [author, setAuthor]   = useState('');
-  const [message, setMessage] = useState('');
-  const [mFocus, setMFocus]   = useState(false);
-
-  function submit() {
-    if (!message.trim()) return;
-    setEntries(addEntry(museumId, author, message));
-    setMessage('');
-  }
-
-  function fmtDate(iso) {
-    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  }
-
-  return (
-    <div style={panel({ top: 60, right: 16, width: 300, maxHeight: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' })}>
-      <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.8, textTransform: 'uppercase', color: C.muted }}>
-          Guestbook · {entries.length}
-        </span>
-      </div>
-
-      {/* Entries list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
-        {entries.length === 0 ? (
-          <div style={{ padding: '20px 0', textAlign: 'center', color: C.dim, fontSize: 12.5 }}>
-            Be the first to leave a note.
-          </div>
-        ) : entries.map(e => (
-          <div key={e.id} style={{
-            padding: '10px 0', borderBottom: `1px solid rgba(100,50,200,0.12)`,
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 11.5, fontWeight: 600, color: '#c8b8f0' }}>{e.author}</span>
-              <span style={{ fontSize: 10.5, color: C.dim }}>{fmtDate(e.date)}</span>
-            </div>
-            <div style={{ fontSize: 12.5, color: C.text, lineHeight: 1.5 }}>{e.message}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Form */}
-      <div style={{ padding: '10px 12px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
-        <input
-          placeholder="Your name (optional)"
-          value={author}
-          onChange={e => setAuthor(e.target.value)}
-          style={{
-            width: '100%', background: 'rgba(0,0,0,0.35)', border: `1px solid ${C.border}`,
-            borderRadius: 7, padding: '7px 10px', color: C.text, fontSize: 12,
-            outline: 'none', marginBottom: 7, boxSizing: 'border-box', fontFamily: 'inherit',
-            pointerEvents: 'auto',
-          }}
-        />
-        <textarea
-          placeholder="Leave a note…"
-          value={message}
-          onChange={e => setMessage(e.target.value)}
-          onFocus={() => setMFocus(true)}
-          onBlur={() => setMFocus(false)}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), submit())}
-          rows={2}
-          style={{
-            width: '100%', background: 'rgba(0,0,0,0.35)',
-            border: `1px solid ${mFocus ? 'rgba(130,70,240,0.55)' : C.border}`,
-            borderRadius: 7, padding: '7px 10px', color: C.text, fontSize: 12,
-            outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
-            marginBottom: 7, pointerEvents: 'auto',
-          }}
-        />
-        <button
-          onClick={submit}
-          disabled={!message.trim()}
-          style={{
-            width: '100%', padding: '7px', borderRadius: 7,
-            background: message.trim() ? 'rgba(100,50,200,0.35)' : 'rgba(100,50,200,0.08)',
-            border: `1px solid ${message.trim() ? C.borderHi : C.border}`,
-            color: message.trim() ? '#d4b8ff' : C.dim,
-            fontSize: 12, fontWeight: 600, cursor: message.trim() ? 'pointer' : 'default',
-            pointerEvents: 'auto', transition: 'all 0.15s',
-          }}
-        >
-          Post · Enter
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ── HUD root ──────────────────────────────────────────────────────────────────
 
-export function HUD({ rooms, currentRoomId, onTeleport, museumName, museumId, onExit }) {
-  const [panel, setPanel] = useState(null); // 'map' | 'search' | 'qr' | 'book'
-  const [visits]          = useState(() => incrementVisits(museumId));
+export function HUD({ rooms, currentRoomId, onTeleport, museumName, museumId, fromGallery, onExit }) {
+  const [panel, setPanel] = useState(null); // 'map' | 'search' | 'qr'
+  const [visits]          = useState(() => {
+    recordRecent(museumId, museumName);
+    return fromGallery ? recordVisit(museumId) : getVisits(museumId);
+  });
 
   const toggle = (name) => setPanel(p => p === name ? null : name);
 
@@ -307,7 +220,6 @@ export function HUD({ rooms, currentRoomId, onTeleport, museumName, museumId, on
       if (e.key === 'm' || e.key === 'M') toggle('map');
       if (e.key === 'f' || e.key === 'F') toggle('search');
       if (e.key === 'q' || e.key === 'Q') toggle('qr');
-      if (e.key === 'b' || e.key === 'B') toggle('book');
       if (e.key === 'Escape') setPanel(null);
     }
     window.addEventListener('keydown', onKey);
@@ -316,6 +228,12 @@ export function HUD({ rooms, currentRoomId, onTeleport, museumName, museumId, on
 
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+      <style>{`
+        .hud-btn:hover { background: rgba(100,50,200,0.25) !important; border-color: rgba(140,90,240,0.65) !important; color: #d4b8ff !important; }
+        .hud-btn-exit:hover { background: rgba(160,30,50,0.32) !important; border-color: rgba(190,55,75,0.6) !important; color: rgba(230,120,130,0.9) !important; }
+        .hud-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(144,96,224,0.4); }
+        .hud-btn-exit:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(200,60,80,0.35); }
+      `}</style>
 
       {/* Top bar */}
       <div style={{
@@ -342,13 +260,13 @@ export function HUD({ rooms, currentRoomId, onTeleport, museumName, museumId, on
         {/* Action buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, pointerEvents: 'auto' }}>
           {[
-            { key: 'map',    label: 'Map',       hint: 'M' },
-            { key: 'search', label: 'Search',    hint: 'F' },
-            { key: 'qr',     label: 'QR',        hint: 'Q' },
-            { key: 'book',   label: 'Guestbook', hint: 'B' },
+            { key: 'map',    label: 'Map',    hint: 'M' },
+            { key: 'search', label: 'Search', hint: 'F' },
+            { key: 'qr',     label: 'QR',     hint: 'Q' },
           ].map(({ key, label, hint }) => (
             <button
               key={key}
+              className="hud-btn"
               style={hBtn(panel === key)}
               onClick={() => toggle(key)}
             >
@@ -359,9 +277,11 @@ export function HUD({ rooms, currentRoomId, onTeleport, museumName, museumId, on
 
           <div style={{ width: 1, height: 18, background: 'rgba(100,50,200,0.3)', margin: '0 2px' }} />
 
-          <button style={hBtn(false, { background: 'rgba(140,20,40,0.18)', borderColor: 'rgba(160,40,65,0.35)', color: 'rgba(200,100,110,0.7)' })} onClick={onExit}>
-            ← Exit
-          </button>
+          <button
+            className="hud-btn-exit"
+            style={hBtn(false, { background: 'rgba(140,20,40,0.18)', borderColor: 'rgba(160,40,65,0.35)', color: 'rgba(200,100,110,0.7)' })}
+            onClick={onExit}
+          >← Exit</button>
         </div>
       </div>
 
