@@ -1,4 +1,4 @@
-# Backend Integration Guide
+git config --global core.editor "code --wait"# Backend Integration Guide
 
 All data is currently stored in **localStorage**. To connect a real database,
 replace the body of each function listed below — the rest of the app stays unchanged.
@@ -56,11 +56,6 @@ All methods are `async`. Each maps 1-to-1 to a REST endpoint.
 | `remove(userId, museumId)` | `DELETE /api/museums/:museumId` |
 | `rename(userId, museumId, name)` | `PATCH /api/museums/:museumId` `{ name }` |
 | `setPublished(userId, museumId, bool)` | `PATCH /api/museums/:museumId` `{ published }` |
-| `saveVersion(userId, museumId, label)` | `POST /api/museums/:museumId/versions` `{ label }` |
-| `getVersions(userId, museumId)` | `GET /api/museums/:museumId/versions` |
-| `restoreVersion(userId, museumId, versionId)` | `POST /api/museums/:museumId/versions/:versionId/restore` |
-| `deleteVersion(userId, museumId, versionId)` | `DELETE /api/museums/:museumId/versions/:versionId` |
-
 **Museum shape** the UI expects:
 ```js
 {
@@ -72,13 +67,7 @@ All methods are `async`. Each maps 1-to-1 to a REST endpoint.
   published:  boolean,
   createdAt:  string,      // ISO date
   updatedAt:  string,
-  versions:   Version[],
 }
-```
-
-**Version shape:**
-```js
-{ id: string, label: string, rooms: Room[], savedAt: string }
 ```
 
 ### Auth header helper
@@ -164,15 +153,6 @@ CREATE TABLE museums (
   updated_at  TIMESTAMPTZ DEFAULT now()
 );
 
--- Museum versions
-CREATE TABLE museum_versions (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  museum_id   UUID REFERENCES museums(id) ON DELETE CASCADE,
-  label       TEXT NOT NULL,
-  rooms       JSONB NOT NULL,
-  saved_at    TIMESTAMPTZ DEFAULT now()
-);
-
 -- Recent visits (per user)
 CREATE TABLE recent_visits (
   user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -189,7 +169,7 @@ CREATE TABLE recent_visits (
 | File | What to replace |
 |---|---|
 | `src/auth/authService.js` | All 7 function bodies |
-| `src/services/museumService.js` | All 11 method bodies + add `authHeaders()` |
+| `src/services/museumService.js` | All 7 method bodies + add `authHeaders()` |
 | `src/services/museumStore.js` | `recordVisit`, `recordRecent`, `getRecent`, `removeRecent`, `clearRecent` |
 | `vite.config.js` | Proxy `target` for production |
 
