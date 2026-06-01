@@ -9,19 +9,12 @@
  *   remove(userId, museumId)       → DELETE /api/museums/:museumId
  *   rename(userId, museumId, name) → PATCH /api/museums/:museumId  { name }
  *   setPublished(userId, id, bool) → PATCH /api/museums/:museumId  { published }
- *   saveVersion(userId, museumId)  → POST  /api/museums/:museumId/versions
- *   getVersions(userId, museumId)  → GET   /api/museums/:museumId/versions
- *   restoreVersion(uid, mid, vid)  → POST  /api/museums/:museumId/versions/:versionId/restore
- *   deleteVersion(uid, mid, vid)   → DELETE /api/museums/:museumId/versions/:versionId
  *
  * Storage layout (single localStorage key):
  *   STORE_KEY → { [userId]: { museums: Museum[] } }
  *
  * Museum shape:
- *   { id, name, rooms, roomCount, published, createdAt, updatedAt, versions: Version[] }
- *
- * Version shape:
- *   { id, label, rooms, savedAt }
+ *   { id, name, rooms, roomCount, published, createdAt, updatedAt }
  */
 
 const STORE_KEY = 'museum_data_v1';
