@@ -15,6 +15,7 @@ The React Compiler is not enabled on this template because of its impact on dev 
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
 # Museum
+<<<<<<< HEAD
 
 3D museum app built with React, Vite, and React Three Fiber.
 
@@ -114,3 +115,5 @@ Vite автоматично проксує `/api/llm/*` на порт `8765`, т
 ```python
 MODEL = "llama3"  # замінити на будь-яку модель з `ollama list`
 ```
+=======
+>>>>>>> a23bc2e (Initial fullstack SQLite setup)

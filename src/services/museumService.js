@@ -9,12 +9,19 @@
  *   remove(userId, museumId)       → DELETE /api/museums/:museumId
  *   rename(userId, museumId, name) → PATCH /api/museums/:museumId  { name }
  *   setPublished(userId, id, bool) → PATCH /api/museums/:museumId  { published }
+ *   saveVersion(userId, museumId)  → POST  /api/museums/:museumId/versions
+ *   getVersions(userId, museumId)  → GET   /api/museums/:museumId/versions
+ *   restoreVersion(uid, mid, vid)  → POST  /api/museums/:museumId/versions/:versionId/restore
+ *   deleteVersion(uid, mid, vid)   → DELETE /api/museums/:museumId/versions/:versionId
  *
  * Storage layout (single localStorage key):
  *   STORE_KEY → { [userId]: { museums: Museum[] } }
  *
  * Museum shape:
- *   { id, name, rooms, roomCount, published, createdAt, updatedAt }
+ *   { id, name, rooms, roomCount, published, createdAt, updatedAt, versions: Version[] }
+ *
+ * Version shape:
+ *   { id, label, rooms, savedAt }
  */
 
 const STORE_KEY = 'museum_data_v1';
@@ -47,14 +54,15 @@ export const museumService = {
   },
 
   /** All museums marked as published (across all users). */
-  async getGallery() {
-    const data = load();
-    return Object.values(data)
-      .flatMap(u => u.museums ?? [])
-      .filter(m => m.published)
-      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-  },
+    async getGallery() {
+        const response = await fetch('http://localhost:3001/api/museums');
 
+        if (!response.ok) {
+            throw new Error('Failed to fetch museums');
+        }
+
+        return await response.json();
+    },
   /** Find a museum by ID regardless of owner (used for QR links). */
   async getMuseumById(id) {
     const data = load();
