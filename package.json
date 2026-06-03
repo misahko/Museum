@@ -17,6 +17,10 @@
     "cors": "^2.8.6",
     "drei": "^2.2.21",
     "express": "^5.2.1",
+<<<<<<< HEAD
+=======
+    "drei": "^2.2.21",
+>>>>>>> 77e2d4e (backend api and sqlite integration)
     "pdfjs-dist": "^5.7.284",
     "qrcode": "^1.5.4",
     "react": "^19.2.5",

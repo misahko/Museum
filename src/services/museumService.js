@@ -24,36 +24,9 @@
  *   { id, label, rooms, savedAt }
  */
 
-const STORE_KEY = 'museum_data_v1';
-const MAX_VERSIONS = 10;
-
-// ── Storage helpers ────────────────────────────────────────────────────────────
-
-function load() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) ?? '{}'); } catch { return {}; }
-}
-function save(data) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(data));
-}
-function userMuseums(data, userId) {
-  return data[userId]?.museums ?? [];
-}
-function writeUserMuseums(data, userId, museums) {
-  return { ...data, [userId]: { ...data[userId], museums } };
-}
-
-// ── Public API ─────────────────────────────────────────────────────────────────
 
 export const museumService = {
 
-  // ── Read ──────────────────────────────────────────────────────────────────
-
-  /** All museums belonging to the given user. */
-  async getMyMuseums(userId) {
-    return userMuseums(load(), userId);
-  },
-
-  /** All museums marked as published (across all users). */
     async getGallery() {
         const response = await fetch('http://localhost:3001/api/museums');
 
