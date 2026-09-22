@@ -1,4 +1,5 @@
 import json
+
 import ollama
 
 MODEL = "llama3"
@@ -14,34 +15,17 @@ _LANG_INSTRUCTION = (
 def extract_events(chunk: dict) -> list[dict]:
     """Stage 2: extract event cards from one chunk."""
     prompt = (
-        "You are an extractor for a research biography museum.\n"
-        "Extract EVERY event, achievement, publication, award, appointment, project, role, or milestone "
-        "from the text below — whether or not a year is mentioned.\n\n"
-        "CRITICAL RULES FOR THE DATE FIELD:\n"
-        "1. \"date\" must be a 4-digit integer (e.g. 1917, 2028) ONLY if that exact 4-digit number "
-        "appears literally in the passage below. Otherwise \"date\" MUST be null.\n"
-        "2. DO NOT invent, guess, estimate, or assume any year. If you are not 100% certain the year "
-        "appears word-for-word in the text, write null.\n"
-        "3. Month numbers (1-12) and day numbers (1-31) are NOT years. Set date to null for those.\n"
-        "4. Never skip an event just because it has no date.\n\n"
-        "EXAMPLES:\n"
-        "Text has no year: "
-        "{\"event\": \"She won the best paper award.\", \"date\": null, \"date_confidence\": null}\n"
-        "Text says '...in 2019 she published...': "
-        "{\"event\": \"She published a paper.\", \"date\": 2019, \"date_confidence\": \"explicit\"}\n\n"
-        "SKIP only:\n"
-        "  - Table of contents entries (title + page number only)\n"
-        "  - Bare page numbers, headers, footers\n"
-        "  - Figure captions that are only labels (e.g. 'Fig. 1')\n"
-        "  - Raw bibliography/reference list entries\n"
-        "  - Lines that are purely numbers, dots, or URLs\n\n"
-        "For each event output:\n"
-        '  {"event": "What happened (1-3 sentences)", '
-        '"date": <4-digit year integer OR null>, '
-        '"date_confidence": "explicit" if that year literally appears in the text, else null}\n\n'
-        "Return ONLY a valid JSON array.\n\n"
-        f"Text:\n{chunk['text']}"
-        + _LANG_INSTRUCTION
+        "Extract ALL events, achievements, publications, awards, appointments, projects, or roles from the text.\n\n"
+        "RULES FOR 'date':\n"
+        "- 'date' MUST be a 4-digit integer ONLY if that exact year is explicitly mentioned in the text (e.g., 2019).\n"
+        "- If no year is mentioned, 'date' MUST be null. Do not guess, estimate, or use day/month numbers.\n"
+        "- Set 'date_confidence' to 'explicit' if a 4-digit year is found, otherwise null.\n\n"
+        "SKIP ONLY:\n"
+        "- Table of contents, headers, footers, page numbers, figure labels, URLs, raw references.\n\n"
+        "OUTPUT FORMAT:\n"
+        "Return ONLY a valid JSON array of objects:\n"
+        '[{"event": "Description (1-3 sentences)", "date": 2019 or null, "date_confidence": "explicit" or null}]\n\n'
+        f"Text:\n{chunk['text']}" + _LANG_INSTRUCTION
     )
     response = ollama.chat(model=MODEL, messages=[{"role": "user", "content": prompt}])
     content = response["message"]["content"].strip()
@@ -59,7 +43,7 @@ def _validated_event(e: dict, chunk_text: str, file_id: str, chunk_index: int) -
     confidence = e.get("date_confidence")
 
     # Accept only valid 4-digit years
-    if not (isinstance(date, int) and 1000 <= date <= 2100):
+    if not (isinstance(date, int)):
         date, confidence = None, None
     elif str(date) not in chunk_text:
         # LLM claimed the year is explicit but it's not in the text — hallucinated
@@ -79,8 +63,7 @@ def name_cluster(representative_event: str) -> str:
     prompt = (
         "Given this event description, write a short thematic title (3-6 words, noun phrase only):\n\n"
         f"{representative_event}\n\n"
-        "Return ONLY the title, nothing else."
-        + _LANG_INSTRUCTION
+        "Return ONLY the title, nothing else." + _LANG_INSTRUCTION
     )
     response = ollama.chat(model=MODEL, messages=[{"role": "user", "content": prompt}])
     return response["message"]["content"].strip()

@@ -15,6 +15,7 @@
     "@react-three/fiber": "^9.6.1",
     "@react-three/rapier": "^2.2.0",
     "drei": "^2.2.21",
+    "elysia": "^1.4.30",
     "pdfjs-dist": "^5.7.284",
     "qrcode": "^1.5.4",
     "react": "^19.2.5",
