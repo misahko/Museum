@@ -11,9 +11,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@elysiajs/cors": "^1.4.2",
+    "@elysiajs/jwt": "^1.4.2",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@react-three/rapier": "^2.2.0",
+    "bcryptjs": "^3.0.3",
     "drei": "^2.2.21",
     "elysia": "^1.4.30",
     "pdfjs-dist": "^5.7.284",

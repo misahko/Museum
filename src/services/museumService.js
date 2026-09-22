@@ -17,13 +17,16 @@
  *   { id, name, rooms, roomCount, published, createdAt, updatedAt }
  */
 
-const STORE_KEY = 'museum_data_v1';
-const MAX_VERSIONS = 10;
+const STORE_KEY = "museum_data_v1";
 
 // ── Storage helpers ────────────────────────────────────────────────────────────
 
 function load() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) ?? '{}'); } catch { return {}; }
+  try {
+    return JSON.parse(localStorage.getItem(STORE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
 }
 function save(data) {
   localStorage.setItem(STORE_KEY, JSON.stringify(data));
@@ -38,7 +41,6 @@ function writeUserMuseums(data, userId, museums) {
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 export const museumService = {
-
   // ── Read ──────────────────────────────────────────────────────────────────
 
   /** All museums belonging to the given user. */
@@ -50,8 +52,8 @@ export const museumService = {
   async getGallery() {
     const data = load();
     return Object.values(data)
-      .flatMap(u => u.museums ?? [])
-      .filter(m => m.published)
+      .flatMap((u) => u.museums ?? [])
+      .filter((m) => m.published)
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
   },
 
@@ -59,7 +61,7 @@ export const museumService = {
   async getMuseumById(id) {
     const data = load();
     for (const u of Object.values(data)) {
-      const m = (u.museums ?? []).find(m => m.id === id);
+      const m = (u.museums ?? []).find((m) => m.id === id);
       if (m) return m;
     }
     return null;
@@ -81,7 +83,10 @@ export const museumService = {
       updatedAt: new Date().toISOString(),
       versions: [],
     };
-    const updated = writeUserMuseums(data, userId, [museum, ...userMuseums(data, userId)]);
+    const updated = writeUserMuseums(data, userId, [
+      museum,
+      ...userMuseums(data, userId),
+    ]);
     save(updated);
     return museum;
   },
@@ -89,88 +94,31 @@ export const museumService = {
   /** Permanently delete a museum and all its versions. */
   async remove(userId, museumId) {
     const data = load();
-    const museums = userMuseums(data, userId).filter(m => m.id !== museumId);
+    const museums = userMuseums(data, userId).filter((m) => m.id !== museumId);
     save(writeUserMuseums(data, userId, museums));
   },
 
   /** Rename a museum. Returns the updated museum. */
   async rename(userId, museumId, newName) {
     const data = load();
-    const museums = userMuseums(data, userId).map(m =>
-      m.id === museumId ? { ...m, name: newName.trim(), updatedAt: new Date().toISOString() } : m
+    const museums = userMuseums(data, userId).map((m) =>
+      m.id === museumId
+        ? { ...m, name: newName.trim(), updatedAt: new Date().toISOString() }
+        : m,
     );
     save(writeUserMuseums(data, userId, museums));
-    return museums.find(m => m.id === museumId);
+    return museums.find((m) => m.id === museumId);
   },
 
   /** Toggle published flag. Returns the updated museum. */
   async setPublished(userId, museumId, published) {
     const data = load();
-    const museums = userMuseums(data, userId).map(m =>
-      m.id === museumId ? { ...m, published, updatedAt: new Date().toISOString() } : m
-    );
-    save(writeUserMuseums(data, userId, museums));
-    return museums.find(m => m.id === museumId);
-  },
-
-  // ── Versions ──────────────────────────────────────────────────────────────
-
-  /** Save current state of a museum as a named version. Returns the new version. */
-  async saveVersion(userId, museumId, label) {
-    const data = load();
-    const museum = userMuseums(data, userId).find(m => m.id === museumId);
-    if (!museum) throw new Error('Museum not found');
-
-    const version = {
-      id: crypto.randomUUID(),
-      label: label ?? `Version ${(museum.versions?.length ?? 0) + 1}`,
-      rooms: museum.rooms,
-      savedAt: new Date().toISOString(),
-    };
-
-    const versions = [version, ...(museum.versions ?? [])].slice(0, MAX_VERSIONS);
-    const museums = userMuseums(data, userId).map(m =>
-      m.id === museumId ? { ...m, versions } : m
-    );
-    save(writeUserMuseums(data, userId, museums));
-    return version;
-  },
-
-  /** Get all saved versions for a museum (newest first). */
-  async getVersions(userId, museumId) {
-    const museums = await museumService.getMyMuseums(userId);
-    return museums.find(m => m.id === museumId)?.versions ?? [];
-  },
-
-  /**
-   * Restore a version — saves current state as a new version first,
-   * then replaces rooms with the chosen version's rooms.
-   * Returns the updated museum.
-   */
-  async restoreVersion(userId, museumId, versionId) {
-    await museumService.saveVersion(userId, museumId, 'Before restore');
-    const data = load();
-    const museum = userMuseums(data, userId).find(m => m.id === museumId);
-    const version = museum?.versions?.find(v => v.id === versionId);
-    if (!museum || !version) throw new Error('Not found');
-
-    const museums = userMuseums(data, userId).map(m =>
+    const museums = userMuseums(data, userId).map((m) =>
       m.id === museumId
-        ? { ...m, rooms: version.rooms, roomCount: version.rooms.length, updatedAt: new Date().toISOString() }
-        : m
+        ? { ...m, published, updatedAt: new Date().toISOString() }
+        : m,
     );
     save(writeUserMuseums(data, userId, museums));
-    return museums.find(m => m.id === museumId);
-  },
-
-  /** Delete a single version. */
-  async deleteVersion(userId, museumId, versionId) {
-    const data = load();
-    const museums = userMuseums(data, userId).map(m =>
-      m.id === museumId
-        ? { ...m, versions: (m.versions ?? []).filter(v => v.id !== versionId) }
-        : m
-    );
-    save(writeUserMuseums(data, userId, museums));
+    return museums.find((m) => m.id === museumId);
   },
 };
