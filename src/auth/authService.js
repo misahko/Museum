@@ -49,15 +49,6 @@ function saveUsers(users) {
 }
 
 export const authService = {
-  /** Returns the currently logged-in user object, or null. */
-  getUser() {
-    try {
-      return JSON.parse(sessionStorage.getItem(SESSION_KEY));
-    } catch {
-      return null;
-    }
-  },
-
   /**
    * Log in with email + password.
    * Resolves to { id, name, email } on success.
