@@ -12,28 +12,30 @@ const app = new Elysia()
       name: "jwt",
       secret: process.env.JWT_SEVRET ?? "dev-secret-change-me",
       exp: "7d",
-    })
-      .guard({}, (app) =>
-        app.derive(async ({ jwt, headers, set }) => {
-          const auth = headers.authorization;
+    }),
+  )
+  .guard({}, (app) =>
+    app
+      .derive(async ({ jwt, headers, set }) => {
+        const auth = headers.authorization;
 
-          const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
-          if (!token) {
-            set.status = 401;
-            throw new Error("Немає токена");
-          }
+        const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
+        if (!token) {
+          set.status = 401;
+          throw new Error("Немає токена");
+        }
 
-          const payload = await jwt.verify(token);
-          if (!payload) {
-            set.status = 401;
-            throw new Error("Невірний токен");
-          }
+        const payload = await jwt.verify(token);
+        if (!payload) {
+          set.status = 401;
+          throw new Error("Невірний токен");
+        }
 
-          console.log("токен пройдений");
+        console.log("токен пройдений");
 
-          return { userId: payload.sub, role: payload.role };
-        }),
-      )
+        return { userId: payload.sub, role: payload.role };
+      })
+
       .get("/secured", ({ some }) => {
         return some;
       }),
