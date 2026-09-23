@@ -4,6 +4,33 @@ import { cors } from "@elysiajs/cors";
 import bcrypt from "bcryptjs";
 
 const users = [];
+const museums = Array.from({ length: 1000 }).map((_, index) => {
+  const isPublished = index % 5 !== 0; // 80% будуть опубліковані, 20% - ні
+  const themes = [
+    "Мистецтво",
+    "Історія",
+    "Космос",
+    "Технології",
+    "Палеонтологія",
+  ];
+
+  return {
+    id: crypto.randomUUID(),
+    userId: "seed-user-id", // Прив'язуємо до фейкового юзера, щоб ніхто випадково не видалив
+    name: `Музей ${themes[index % themes.length]} №${index + 1}`,
+    rooms: [{}, {}, {}], // 3 порожні кімнати для заглушки
+    roomCount: 3,
+    tags: [
+      "тест",
+      "автогенерація",
+      themes[index % themes.length].toLowerCase(),
+    ],
+    published: isPublished,
+    createdAt: new Date(Date.now() - Math.random() * 10000000000).toISOString(), // Випадкова дата в минулому
+    updatedAt: new Date().toISOString(),
+    versions: [],
+  };
+});
 
 const db = {
   getUserByEmail: (email) => {
@@ -37,24 +64,49 @@ const db = {
   },
 
   getUserMuseums: (userId) => {
-    return [];
+    return museums.filter((m) => m.userId === userId);
   },
-
   getGallery: () => {
-    return [];
+    return museums;
   },
-
   getMuseumById: (id) => {
-    return null;
+    return museums.find((m) => m.id === id) ?? null;
   },
-
-  createMuseum: (userId, museum) => {},
-
-  removeMuseum: (userId, museumId) => {},
-
-  updateMuseum: (userId, museumId, name) => {},
-
-  setMuseumPublished: (userId, museumId, value) => {},
+  createMuseum: (userId, museum) => {
+    const museumWithOwner = { ...museum, userId };
+    museums.push(museumWithOwner);
+    return museumWithOwner;
+  },
+  removeMuseum: (userId, museumId) => {
+    const index = museums.findIndex(
+      (m) => m.id === museumId && m.userId === userId,
+    );
+    if (index !== -1) {
+      museums.splice(index, 1);
+      return true;
+    }
+    return false;
+  },
+  updateMuseum: (userId, museumId, name) => {
+    const museum = museums.find(
+      (m) => m.id === museumId && m.userId === userId,
+    );
+    if (museum) {
+      museum.name = name;
+      museum.updatedAt = new Date().toISOString();
+    }
+    return museum;
+  },
+  setMuseumPublished: (userId, museumId, value) => {
+    const museum = museums.find(
+      (m) => m.id === museumId && m.userId === userId,
+    );
+    if (museum) {
+      museum.published = value;
+      museum.updatedAt = new Date().toISOString();
+    }
+    return museum;
+  },
 };
 
 const app = new Elysia()
@@ -72,22 +124,42 @@ const app = new Elysia()
     }
   })
   .get(
-    "/api/museums",
+    "/museums",
     async ({ query }) => {
       const isPublished = query.published === "true";
-      const allMuseums = await db.getGallery();
+
+      const page = parseInt(query.page ?? "1");
+      const limit = parseInt(query.limit ?? "20");
+
+      const allMuseums = db.getGallery();
       if (isPublished) {
-        return allMuseums.filter((m) => m.published === true);
+        allMuseums.filter((m) => m.published === true);
       }
-      return allMuseums;
+
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+
+      const paginatedMuseums = allMuseums.slice(startIndex, endIndex);
+
+      // 4. Повертаємо порцію ТА загальну кількість (щоб фронтенд знав, скільки всього сторінок)
+      return {
+        total: allMuseums.length,
+        totalPages: Math.ceil(allMuseums.length / limit),
+        currentPage: page,
+        data: paginatedMuseums, // Тут буде лише 20 музеїв
+      };
     },
     {
-      query: t.Object({ published: t.Optional(t.String) }),
+      query: t.Object({
+        published: t.Optional(t.String()),
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+      }),
     },
   )
 
   .get(
-    "/api/museums/:id",
+    "/museums/:id",
     async ({ params, set }) => {
       const { id } = params;
 
@@ -279,23 +351,14 @@ const app = new Elysia()
         },
       )
 
-      .get(
-        "/api/users/:userId/museums",
-        async ({ params }) => {
-          const { userId } = params;
-          const museums = db.getUserMuseums(userId) ?? [];
-          return museums;
-        },
-        {
-          params: t.Object({ userId: t.String() }),
-        },
-      )
+      .get("/users/museums", async ({ userId }) => {
+        const museums = db.getUserMuseums(userId) ?? [];
+        return museums;
+      })
 
       .post(
-        "/api/users/:userId/museums",
-        async ({ params, body, set }) => {
-          const { userId } = params;
-
+        "/users/museums",
+        async ({ body, set, userId }) => {
           const { name, rooms, roomCount, tags } = body;
 
           const newMuseum = {
@@ -317,7 +380,6 @@ const app = new Elysia()
           return newMuseum;
         },
         {
-          params: t.Object({ userId: t.String() }),
           body: t.Object({
             name: t.String(),
             rooms: t.Array(t.Any()),
@@ -328,7 +390,7 @@ const app = new Elysia()
       )
 
       .patch(
-        "/api/museums/:museumId",
+        "/museums/:museumId",
         async ({ params, body, set, userId }) => {
           const { museumId } = params;
           const { name, published } = body;
@@ -343,6 +405,11 @@ const app = new Elysia()
           if (!museum) {
             set.status = 404;
             throw new Error("Музей не знайдено");
+          }
+
+          if (museum.userId !== userId) {
+            set.status = 403;
+            return { error: "У вас немає прав для видалення цього музею" };
           }
 
           if (name !== undefined) {
@@ -365,7 +432,7 @@ const app = new Elysia()
       )
 
       .delete(
-        "/api/museums/:museumId",
+        "/museums/:museumId",
         async ({ params, set, userId }) => {
           const { museumId } = params;
 
@@ -374,6 +441,11 @@ const app = new Elysia()
           if (!museum) {
             set.status = 404;
             throw new Error("Музей не знайдено");
+          }
+
+          if (museum.userId !== userId) {
+            set.status = 403;
+            return { error: "У вас немає прав для видалення цього музею" };
           }
 
           await db.removeMuseum(userId, museumId);

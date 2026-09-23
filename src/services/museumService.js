@@ -1,4 +1,4 @@
-import {apiFetch} from "./apiService.js";
+import { apiFetch } from "./apiService.js";
 /**
  * Museum service — localStorage-backed.
  *
@@ -46,53 +46,43 @@ export const museumService = {
 
   /** All museums belonging to the given user. */
   async getMyMuseums(userId) {
-    try
-    {
-      const res = await apiFetch(`/api/users/${userId}/museums`);
-      if (!res.ok)
-      {
-        throw new Error ("Помилка при отриманні музеїв");
+    try {
+      const res = await apiFetch(`/users/museums`);
+      if (!res.ok) {
+        throw new Error("Помилка при отриманні музеїв");
       }
       return await res.json();
-    }
-    catch (err)
-    {
+    } catch (err) {
       console.error(err);
       return [];
     }
   },
 
   /** All museums marked as published (across all users). */
-  async getGallery() {
-    try
-    {
-      const res = await apiFetch('/api/museums?published=true');
-      if (!res.ok)
-      {
-        throw new Error ("Помилка при отриманні галереї");
+  async getGallery(page = 1, limit = 24) {
+    try {
+      const res = await apiFetch(
+        `/museums?published=true&page=${page}&limit=${limit}`,
+      );
+      if (!res.ok) {
+        throw new Error("Помилка при отриманні галереї");
       }
       return await res.json();
-    }
-    catch (err)
-    {
+    } catch (err) {
       console.error(err);
-      return [];
+      return { data: [], totalPages: 0, currentPage: 1 };
     }
   },
 
   /** Find a museum by ID regardless of owner (used for QR links). */
   async getMuseumById(id) {
-        try
-    {
-      const res = await apiFetch(`/api/museums/${id}`);
-      if (!res.ok)
-      {
-        throw new Error ("Помилка при отриманні музею");
+    try {
+      const res = await apiFetch(`/museums/${id}`);
+      if (!res.ok) {
+        throw new Error("Помилка при отриманні музею");
       }
       return await res.json();
-    }
-    catch (err)
-    {
+    } catch (err) {
       console.error(err);
       return [];
     }
@@ -103,7 +93,7 @@ export const museumService = {
   /** Create and persist a new museum for the user. Returns the saved museum. */
   async create(userId, { name, rooms, roomCount, tags }) {
     try {
-      const res = await apiFetch(`/api/users/${userId}/museums`, {
+      const res = await apiFetch(`/users/museums`, {
         method: "POST",
         body: JSON.stringify({
           name,
@@ -127,7 +117,7 @@ export const museumService = {
   /** Permanently delete a museum and all its versions. */
   async remove(userId, museumId) {
     try {
-      const res = await apiFetch(`/api/museums/${museumId}`, {
+      const res = await apiFetch(`/museums/${museumId}`, {
         method: "DELETE",
       });
 
@@ -143,9 +133,9 @@ export const museumService = {
   },
 
   /** Rename a museum. Returns the updated museum. */
-async rename(userId, museumId, newName) {
-  try {
-      const res = await apiFetch(`/api/museums/${museumId}`, {
+  async rename(userId, museumId, newName) {
+    try {
+      const res = await apiFetch(`/museums/${museumId}`, {
         method: "PATCH",
         body: JSON.stringify({
           name: newName.trim(),
@@ -166,7 +156,7 @@ async rename(userId, museumId, newName) {
   /** Toggle published flag. Returns the updated museum. */
   async setPublished(userId, museumId, published) {
     try {
-      const res = await apiFetch(`/api/museums/${museumId}`, {
+      const res = await apiFetch(`/museums/${museumId}`, {
         method: "PATCH",
         body: JSON.stringify({
           published,

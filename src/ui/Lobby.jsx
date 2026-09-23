@@ -1057,6 +1057,9 @@ const STAGE_ICONS = {
 export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
   const [saved, setSaved] = useState([]);
   const [gallery, setGallery] = useState(null);
+  const [galleryPage, setGalleryPage] = useState(1);
+  const [galleryTotalPages, setGalleryTotalPages] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [view, setView] = useState("home");
   const [tab, setTab] = useState("gallery");
   const [qrMuseum, setQrMuseum] = useState(null);
@@ -1094,6 +1097,7 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
   const [generateHover, setGenerateHover] = useState(false);
   const fileRef = useRef();
   const logEndRef = useRef();
+  const loaderRef = useRef(null);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1137,12 +1141,63 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
     setOrcidLoading(false);
   }
 
-  // Load gallery (published museums)
+  // Load gallery (published museums) with pagination
+  const loadGallery = async (pageNum = 1) => {
+    setIsLoadingMore(true);
+    try {
+      const response = await museumService.getGallery(pageNum); // Передаємо номер сторінки
+
+      console.log("ВІДПОВІДЬ СЕРВЕРА:", response);
+      // Дані, що прийшли з бекенду
+      const newData = response.data || [];
+
+      if (pageNum === 1) {
+        setGallery(newData);
+      } else {
+        setGallery((prev) => [...prev, ...newData]); // Доклеюємо нові картки
+      }
+
+      setGalleryTotalPages(response.totalPages || 1);
+      setGalleryPage(response.currentPage || 1);
+    } catch (e) {
+      if (pageNum === 1) setGallery([]);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Слідкуємо за тим, коли loaderRef з'явиться на екрані
   useEffect(() => {
-    museumService
-      .getGallery()
-      .then(setGallery)
-      .catch(() => setGallery([]));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        // Якщо догортали до низу, ми не вантажимо інше, і є ще сторінки
+        if (
+          target.isIntersecting &&
+          !isLoadingMore &&
+          galleryPage < galleryTotalPages
+        ) {
+          loadGallery(galleryPage + 1);
+        }
+      },
+      {
+        rootMargin: "200px", // Починаємо завантаження за 200px до того, як користувач дійде до самого кінця
+      },
+    );
+
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current);
+    }
+
+    return () => {
+      if (loaderRef.current) {
+        observer.unobserve(loaderRef.current);
+      }
+    };
+  }, [isLoadingMore, galleryPage, galleryTotalPages]); // Оновлюємо обзервер при зміні цих станів
+
+  useEffect(() => {
+    loadGallery(1); // Завантажуємо першу сторінку при старті
   }, []);
 
   // Load user's museums when user changes
@@ -1629,16 +1684,32 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
                       />
                     );
                   return (
-                    <div style={S.tileGrid}>
-                      {filtered.map((m) => (
-                        <MuseumTile
-                          key={m.id}
-                          museum={m}
-                          onOpen={(m) => handleOpen(m, true)}
-                          onQR={setQrMuseum}
-                          userId={null}
-                        />
-                      ))}
+                    <div>
+                      <div style={S.tileGrid}>
+                        {filtered.map((m) => (
+                          <MuseumTile
+                            key={m.id}
+                            museum={m}
+                            onOpen={(m) => handleOpen(m, true)}
+                            onQR={setQrMuseum}
+                            userId={null}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Це наш тригер для IntersectionObserver */}
+                      {galleryPage < galleryTotalPages && (
+                        <div
+                          ref={loaderRef}
+                          style={{
+                            textAlign: "center",
+                            padding: "40px 0",
+                            color: "#cbbff5",
+                          }}
+                        >
+                          {isLoadingMore && <span>Loading more...</span>}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}

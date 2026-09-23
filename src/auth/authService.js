@@ -161,10 +161,6 @@ export const authService = {
     }
   },
 
-  /**
-   * Permanently delete account — requires password confirmation.
-   * Backend: DELETE /api/users/:id  { password }
-   */
   async deleteAccount(userId, password) {
     const res = await apiFetch("/users/me", {
       method: "DELETE",
