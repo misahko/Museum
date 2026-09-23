@@ -1241,19 +1241,19 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
   async function handleDelete(id) {
     await museumService.remove(user.id, id);
     setSaved((prev) => prev.filter((m) => m.id !== id));
-    setGallery(await museumService.getGallery());
+    loadGallery(1, search, filterTags, sortBy);
   }
 
   async function handleRename(id, newName) {
     const updated = await museumService.rename(user.id, id, newName);
     setSaved((prev) => prev.map((m) => (m.id === id ? updated : m)));
-    if (updated.published) setGallery(await museumService.getGallery());
+    if (updated.published) loadGallery(1, search, filterTags, sortBy);
   }
 
   async function handlePublish(id, published) {
     const updated = await museumService.setPublished(user.id, id, published);
     setSaved((prev) => prev.map((m) => (m.id === id ? updated : m)));
-    setGallery(await museumService.getGallery());
+    loadGallery(1, search, filterTags, sortBy);
   }
 
   function handleOpen(museum, fromGallery = false) {
