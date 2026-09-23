@@ -1,3 +1,4 @@
+import {apiFetch} from "./apiService.js";
 /**
  * Museum service — localStorage-backed.
  *
@@ -45,80 +46,141 @@ export const museumService = {
 
   /** All museums belonging to the given user. */
   async getMyMuseums(userId) {
-    return userMuseums(load(), userId);
+    try
+    {
+      const res = await apiFetch(`/api/users/${userId}/museums`);
+      if (!res.ok)
+      {
+        throw new Error ("Помилка при отриманні музеїв");
+      }
+      return await res.json();
+    }
+    catch (err)
+    {
+      console.error(err);
+      return [];
+    }
   },
 
   /** All museums marked as published (across all users). */
   async getGallery() {
-    const data = load();
-    return Object.values(data)
-      .flatMap((u) => u.museums ?? [])
-      .filter((m) => m.published)
-      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    try
+    {
+      const res = await apiFetch(`/api/museums?published=true`);
+      if (!res.ok)
+      {
+        throw new Error ("Помилка при отриманні галереї");
+      }
+      return await res.json();
+    }
+    catch (err)
+    {
+      console.error(err);
+      return [];
+    }
   },
 
   /** Find a museum by ID regardless of owner (used for QR links). */
   async getMuseumById(id) {
-    const data = load();
-    for (const u of Object.values(data)) {
-      const m = (u.museums ?? []).find((m) => m.id === id);
-      if (m) return m;
+        try
+    {
+      const res = await apiFetch(`/api/museums/${id}`);
+      if (!res.ok)
+      {
+        throw new Error ("Помилка при отриманні музею");
+      }
+      return await res.json();
     }
-    return null;
+    catch (err)
+    {
+      console.error(err);
+      return [];
+    }
   },
 
   // ── Write ─────────────────────────────────────────────────────────────────
 
   /** Create and persist a new museum for the user. Returns the saved museum. */
   async create(userId, { name, rooms, roomCount, tags }) {
-    const data = load();
-    const museum = {
-      id: crypto.randomUUID(),
-      name,
-      rooms,
-      roomCount: roomCount ?? rooms.length,
-      tags: tags ?? [],
-      published: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      versions: [],
-    };
-    const updated = writeUserMuseums(data, userId, [
-      museum,
-      ...userMuseums(data, userId),
-    ]);
-    save(updated);
-    return museum;
+    try {
+      const res = await apiFetch(`/api/users/${userId}/museums`, {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          rooms,
+          roomCount: roomCount ?? rooms?.length ?? 0,
+          tags: tags ?? [],
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Не вдалося створити музей");
+      }
+
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
   },
 
   /** Permanently delete a museum and all its versions. */
   async remove(userId, museumId) {
-    const data = load();
-    const museums = userMuseums(data, userId).filter((m) => m.id !== museumId);
-    save(writeUserMuseums(data, userId, museums));
+    try {
+      const res = await apiFetch(`/api/museums/${museumId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Не вдалося видалити музей");
+      }
+
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
   },
 
   /** Rename a museum. Returns the updated museum. */
-  async rename(userId, museumId, newName) {
-    const data = load();
-    const museums = userMuseums(data, userId).map((m) =>
-      m.id === museumId
-        ? { ...m, name: newName.trim(), updatedAt: new Date().toISOString() }
-        : m,
-    );
-    save(writeUserMuseums(data, userId, museums));
-    return museums.find((m) => m.id === museumId);
+async rename(userId, museumId, newName) {
+  try {
+      const res = await apiFetch(`/api/museums/${museumId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: newName.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Не вдалося перейменувати музей");
+      }
+
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
   },
 
   /** Toggle published flag. Returns the updated museum. */
   async setPublished(userId, museumId, published) {
-    const data = load();
-    const museums = userMuseums(data, userId).map((m) =>
-      m.id === museumId
-        ? { ...m, published, updatedAt: new Date().toISOString() }
-        : m,
-    );
-    save(writeUserMuseums(data, userId, museums));
-    return museums.find((m) => m.id === museumId);
+    try {
+      const res = await apiFetch(`/api/museums/${museumId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          published,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Не вдалося змінити статус публікації музею");
+      }
+
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
   },
 };
