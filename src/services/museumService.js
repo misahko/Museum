@@ -45,9 +45,16 @@ export const museumService = {
   // ── Read ──────────────────────────────────────────────────────────────────
 
   /** All museums belonging to the given user. */
-  async getMyMuseums(userId) {
+  async getMyMuseums(userId, search = "") {
     try {
-      const res = await apiFetch(`/users/museums`);
+      let url = `/users/museums`;
+
+      if (search) {
+        url += `?search=${encodeURIComponent(search)}`;
+      }
+
+      const res = await apiFetch(url);
+
       if (!res.ok) {
         throw new Error("Помилка при отриманні музеїв");
       }

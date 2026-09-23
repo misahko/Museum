@@ -1230,8 +1230,11 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
       setSaved([]);
       return;
     }
-    museumService.getMyMuseums(user.id).then(setSaved);
-  }, [user?.id]);
+    const timer = setTimeout(() => {
+      museumService.getMyMuseums(user.id, search).then(setSaved);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [user?.id, search]);
 
   // ── Museum handlers ────────────────────────────────────────────────────────
 
@@ -1525,9 +1528,6 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
               onBlur={() => setTabFocus(null)}
             >
               My Museums
-              {user && saved.length > 0 && (
-                <span style={S.tabCount(tab === "mine")}>{saved.length}</span>
-              )}
             </button>
             <button
               style={S.tab(tab === "recent", tabFocus === "recent")}
@@ -1751,26 +1751,26 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
                         </button>
                       </div>
                     );
-                  const filtered = saved.filter((m) =>
-                    m.name?.toLowerCase().includes(search.toLowerCase()),
-                  );
-                  if (saved.length === 0)
+                  if (saved.length === 0) {
+                    if (search !== "")
+                      return (
+                        <EmptyState
+                          text="No results."
+                          hint={`No museums match "${search}".`}
+                        />
+                      );
+
                     return (
                       <EmptyState
                         text="No personal museums yet."
                         hint="Click «+ New» to generate your first museum."
                       />
                     );
-                  if (filtered.length === 0)
-                    return (
-                      <EmptyState
-                        text="No results."
-                        hint={`No museums match "${search}".`}
-                      />
-                    );
+                  }
+
                   return (
                     <div style={S.tileGrid}>
-                      {filtered.map((m) => (
+                      {saved.map((m) => (
                         <MuseumTile
                           key={m.id}
                           museum={m}
