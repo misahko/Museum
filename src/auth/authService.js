@@ -5,11 +5,10 @@
 //   logout  → POST /api/auth/logout  (+ clear token)
 //   getUser → GET  /api/auth/me      (or decode JWT)
 
-import { apiFetch } from "../services/apiService";
+import { apiFetch, API, TOKEN_KEY } from "../services/apiService";
 
 const USERS_KEY = "museum_users_v1";
-const SESSION_KEY = "museum_session_v1";
-
+export const SESSION_KEY = "museum_session_v1";
 const SEED_USERS = [
   {
     id: "seed-1",
@@ -49,18 +48,35 @@ function saveUsers(users) {
 }
 
 export const authService = {
+  getUser() {
+    try {
+      return JSON.parse(sessionStorage.getItem(SESSION_KEY));
+    } catch {
+      return null;
+    }
+  },
   /**
    * Log in with email + password.
    * Resolves to { id, name, email } on success.
    * Rejects with an Error whose .message is user-facing.
    */
   async login(email, password) {
-    const users = loadUsers();
-    const user = users.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase(),
-    );
-    if (!user || user.password !== password)
-      throw new Error("Incorrect email or password.");
+    const res = await fetch(`${API}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, password: password }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error);
+    }
+
+    const data = res.json();
+
+    const user = data.user;
+    localStorage.setItem(TOKEN_KEY, data.token);
+
     const session = { id: user.id, name: user.name, email: user.email };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
@@ -72,16 +88,21 @@ export const authService = {
    * Rejects with an Error whose .message is user-facing.
    */
   async register(name, email, password) {
-    const users = loadUsers();
-    if (users.some((u) => u.email.toLowerCase() === email.trim().toLowerCase()))
-      throw new Error("An account with this email already exists.");
-    const user = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      password,
-    };
-    saveUsers([...users, user]);
+    const res = await fetch(`${API}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error);
+    }
+
+    const data = await res.json();
+
+    const user = data.user;
+    localStorage.setItem(TOKEN_KEY, data.token);
+
     const session = { id: user.id, name: user.name, email: user.email };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
@@ -90,6 +111,7 @@ export const authService = {
   /** Log out and clear the session. */
   logout() {
     sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
   },
 
   /**
@@ -97,15 +119,24 @@ export const authService = {
    * Backend: PATCH /api/users/:id  { name }
    */
   async updateName(userId, newName) {
-    const users = loadUsers();
-    const idx = users.findIndex((u) => u.id === userId);
-    if (idx === -1) throw new Error("User not found.");
-    users[idx].name = newName.trim();
-    saveUsers(users);
+    const res = await apiFetch("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify({ name: newName.trim() }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error);
+    }
+
+    const data = await res.json();
+
+    const user = data.user;
+
     const session = {
-      id: users[idx].id,
-      name: users[idx].name,
-      email: users[idx].email,
+      id: user.id,
+      name: user.name,
+      email: user.email,
     };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
@@ -116,15 +147,15 @@ export const authService = {
    * Backend: POST /api/users/:id/change-password  { currentPassword, newPassword }
    */
   async updatePassword(userId, currentPassword, newPassword) {
-    const users = loadUsers();
-    const idx = users.findIndex((u) => u.id === userId);
-    if (idx === -1) throw new Error("User not found.");
-    if (users[idx].password !== currentPassword)
-      throw new Error("Current password is incorrect.");
-    if (newPassword.length < 6)
-      throw new Error("New password must be at least 6 characters.");
-    users[idx].password = newPassword;
-    saveUsers(users);
+    const res = apiFetch("/users/change-password", {
+      method: "POST",
+      body: { password: currentPassword, newPassword: newPassword },
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error);
+    }
   },
 
   /**
