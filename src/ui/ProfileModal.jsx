@@ -597,8 +597,7 @@ export function ProfileModal({ user, onUserUpdate, onLogout, onClose }) {
                   fontWeight: 600,
                 }}
               >
-                This will delete all your museums and versions. This cannot be
-                undone.
+                This will delete all your museums. This cannot be undone.
               </div>
               <Field
                 label="Your password"

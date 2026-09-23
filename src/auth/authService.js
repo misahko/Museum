@@ -72,7 +72,7 @@ export const authService = {
       throw new Error(err.error);
     }
 
-    const data = res.json();
+    const data = await res.json();
 
     const user = data.user;
     localStorage.setItem(TOKEN_KEY, data.token);
@@ -147,9 +147,12 @@ export const authService = {
    * Backend: POST /api/users/:id/change-password  { currentPassword, newPassword }
    */
   async updatePassword(userId, currentPassword, newPassword) {
-    const res = apiFetch("/users/change-password", {
+    const res = await apiFetch("/users/change-password", {
       method: "POST",
-      body: { password: currentPassword, newPassword: newPassword },
+      body: JSON.stringify({
+        password: currentPassword,
+        newPassword: newPassword,
+      }),
     });
 
     if (!res.ok) {
@@ -163,11 +166,16 @@ export const authService = {
    * Backend: DELETE /api/users/:id  { password }
    */
   async deleteAccount(userId, password) {
-    const users = loadUsers();
-    const user = users.find((u) => u.id === userId);
-    if (!user) throw new Error("User not found.");
-    if (user.password !== password) throw new Error("Incorrect password.");
-    saveUsers(users.filter((u) => u.id !== userId));
-    sessionStorage.removeItem(SESSION_KEY);
+    const res = await apiFetch("/users/me", {
+      method: "DELETE",
+      body: JSON.stringify({ password: password }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error);
+    }
+
+    this.logout();
   },
 };

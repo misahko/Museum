@@ -6,25 +6,34 @@ import bcrypt from "bcryptjs";
 const users = [];
 
 const db = {
-  findByEmail: (email) => {
+  getUserByEmail: (email) => {
     return users.find(
       (user) => user.email.toLocaleLowerCase() === email.toLocaleLowerCase(),
     );
   },
-  findById: (userId) => {
+  getUserById: (userId) => {
     return users.find((user) => user.id === userId);
   },
-  addNewUser: (user) => {
+  createNewUser: (user) => {
     users.push(user);
   },
-  rename: (userId, newName) => {
-    const user = db.findById(userId);
+  renameUser: (userId, newName) => {
+    const user = db.getUserById(userId);
     user.name = newName;
     return user;
   },
-  changePassword: (userId, newPassword) => {
-    const user = db.findById(userId);
+  changeUserPassword: (userId, newPassword) => {
+    const user = db.getUserById(userId);
     user.passwordHash = newPassword;
+  },
+
+  removeUser: (userId) => {
+    const index = users.findIndex((u) => u.id === userId);
+    if (index !== -1) {
+      users.splice(index, 1); // Видаляємо користувача з масиву
+      return true;
+    }
+    return false;
   },
 
   getUserMuseums: (userId) => {
@@ -55,178 +64,220 @@ const app = new Elysia()
       name: "jwt",
       secret: process.env.JWT_SECRET ?? "dev-secret-change-me",
       exp: "7d",
-    }))
-    .get(
-        "/api/museums",
-        async ({ query }) => {
-          const isPublished = query.published === "true";
-          const allMuseums = await db.getGallery();
-          if (isPublished) {
-            return allMuseums.filter((m) => m.published === true);
-          }
-          return allMuseums;
-        },
-        {
-          query: t.Object({ published: t.Optional(t.String) }),
-        },
-      )
+    }),
+  )
+  .onError(({ code, error, set }) => {
+    if (code === "VALIDATION") {
+      console.log("Помилка валідації body/params:", error.all);
+    }
+  })
+  .get(
+    "/api/museums",
+    async ({ query }) => {
+      const isPublished = query.published === "true";
+      const allMuseums = await db.getGallery();
+      if (isPublished) {
+        return allMuseums.filter((m) => m.published === true);
+      }
+      return allMuseums;
+    },
+    {
+      query: t.Object({ published: t.Optional(t.String) }),
+    },
+  )
 
-      .get(
-        "/api/museums/:id",
-        async ({ params, set }) => {
-          const { id } = params;
+  .get(
+    "/api/museums/:id",
+    async ({ params, set }) => {
+      const { id } = params;
 
-          const museum = await db.getMuseumById(id);
+      const museum = await db.getMuseumById(id);
 
-          if (!museum) {
-            set.status = 404;
-            throw new Error("Музей не знайдено");
-          }
+      if (!museum) {
+        set.status = 404;
+        throw new Error("Музей не знайдено");
+      }
 
-          return museum;
-        },
-        {
-          params: t.Object({ id: t.String() }),
-        },
-      )
-      .post(
-        "/auth/login",
-        async ({ body, set, jwt }) => {
-          const user = db.findByEmail(body.email);
+      return museum;
+    },
+    {
+      params: t.Object({ id: t.String() }),
+    },
+  )
+  .post(
+    "/auth/login",
+    async ({ body, set, jwt }) => {
+      const user = db.getUserByEmail(body.email);
+
+      if (!user) {
+        set.status = 401;
+        return { error: "Невірна почта або пароль1" };
+      }
+
+      const valid = await bcrypt.compare(body.password, user.passwordHash);
+
+      if (!valid) {
+        set.status = 401;
+        return { error: "Невірна почта або пароль2" };
+      }
+
+      console.log(user);
+
+      const token = await jwt.sign({ sub: user.id });
+
+      return {
+        token,
+        user: { id: user.id, name: user.name, email: user.email },
+      };
+    },
+    {
+      body: t.Object({ email: t.String(), password: t.String() }),
+    },
+  )
+  .post(
+    "/auth/register",
+    async ({ body, set, jwt }) => {
+      const existing = db.getUserByEmail(body.email);
+      if (existing) {
+        set.status = 409;
+        return { error: "Почта вже зайнята" };
+      }
+
+      const passwordHash = await bcrypt.hash(body.password, 10);
+
+      const user = {
+        id: crypto.randomUUID(),
+        name: body.name,
+        passwordHash: passwordHash,
+        email: body.email,
+      };
+
+      db.createNewUser(user);
+
+      const token = await jwt.sign({ sub: user.id });
+
+      return {
+        token,
+        user: { id: user.id, name: user.name, email: user.email },
+      };
+    },
+    {
+      body: t.Object({
+        name: t.String({ minLength: 3 }),
+        email: t.String({ format: "email" }),
+        password: t.String({ minLength: 6 }),
+      }),
+    },
+  )
+  .guard({}, (app) =>
+    app
+      .derive(async ({ jwt, headers, set }) => {
+        const auth = headers.authorization;
+
+        const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
+        if (!token) {
+          set.status = 401;
+          throw new Error("Немає токена");
+        }
+
+        const payload = await jwt.verify(token);
+        if (!payload) {
+          set.status = 401;
+          throw new Error("Невірний токен");
+        }
+
+        const user = db.getUserById(payload.sub);
+
+        if (!user) {
+          set.status = 401;
+          throw new Error("Користувача не знайдено");
+        }
+
+        console.log("токен пройдений");
+
+        return { userId: payload.sub };
+      })
+      .patch(
+        "/users/me",
+        async ({ body, set, userId }) => {
+          const user = db.getUserById(userId);
 
           if (!user) {
             set.status = 401;
-            return { error: "Невірна почта або пароль1" };
+            return { error: "Користувача не знайдено" };
+          }
+
+          const newUser = db.renameUser(userId, body.name);
+
+          return {
+            message: "Ім'я оновлено",
+            user: {
+              id: newUser.id,
+              name: newUser.name,
+              email: newUser.email,
+            },
+          };
+        },
+        { body: t.Object({ name: t.String({ minLength: 2 }) }) },
+      )
+
+      .delete(
+        "/users/me",
+        async ({ body, set, userId }) => {
+          const user = db.getUserById(userId);
+
+          if (!user) {
+            set.status = 401;
+            return { error: "Користувача не знайдено" };
           }
 
           const valid = await bcrypt.compare(body.password, user.passwordHash);
 
           if (!valid) {
-            set.status = 401;
-            return { error: "Невірна почта або пароль2" };
+            set.status = 404;
+            return { error: "Неправильний пароль" };
           }
 
-          const token = await jwt.sign({ sub: user.id });
+          db.removeUser(userId);
 
           return {
-            token,
-            user: { id: user.id, name: user.name, email: user.email },
+            message: "Користувача видалено",
           };
         },
         {
-          body: t.Object({ email: t.String(), password: t.String() }),
+          body: t.Object({ password: t.String() }),
         },
       )
+
       .post(
-        "/auth/register",
-        async ({ body, set, jwt }) => {
-          const existing = db.findByEmail(body.email);
-          if (existing) {
-            set.status = 409;
-            return { error: "Почта вже зайнята" };
+        "/users/change-password",
+        async ({ body, set, userId }) => {
+          const user = db.getUserById(userId);
+
+          if (!user) {
+            set.status = 401;
+            return { error: "Користувача не знайдено" };
           }
 
-          const passwordHash = await bcrypt.hash(body.password, 10);
+          const valid = await bcrypt.compare(body.password, user.passwordHash);
 
-          const user = {
-            id: crypto.randomUUID(),
-            name: body.name,
-            passwordHash: passwordHash,
-            email: body.email,
-          };
+          if (!valid) {
+            set.status = 404;
+            return { error: "Неправильний пароль" };
+          }
 
-          db.addNewUser(user);
+          const passwordHash = await bcrypt.hash(body.newPassword, 10);
 
-          const token = await jwt.sign({ sub: user.id });
-
-          return {
-            token,
-            user: { id: user.id, name: user.name, email: user.email },
-          };
+          db.changeUserPassword(userId, passwordHash);
+          return { message: "Пароль успішно змінено" };
         },
         {
           body: t.Object({
-            name: t.String({ minLength: 3 }),
-            email: t.String({ format: "email" }),
-            password: t.String({ minLength: 6 }),
+            password: t.String(),
+            newPassword: t.String({ minLength: 6 }),
           }),
         },
       )
-      .guard({}, (app) =>
-        app
-          .derive(async ({ jwt, headers, set }) => {
-            const auth = headers.authorization;
-
-            const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
-            if (!token) {
-              set.status = 401;
-              throw new Error("Немає токена");
-            }
-
-            const payload = await jwt.verify(token);
-            if (!payload) {
-              set.status = 401;
-              throw new Error("Невірний токен");
-            }
-
-            console.log("токен пройдений");
-
-            return { userId: payload.sub };
-          })
-          .patch(
-            "/users/me",
-            async ({ body, set, userId }) => {
-              const user = db.findById(userId);
-
-              if (!user) {
-                set.status = 404;
-                return { error: "Користувача не знайдено" };
-              }
-
-              const newUser = db.rename(userId, body.name);
-
-              return {
-                message: "Ім'я оновлено",
-                user: {
-                  id: newUser.id,
-                  name: newUser.name,
-                  email: newUser.email,
-                },
-              };
-            },
-            { body: t.Object({ name: t.String({ minLength: 2 }) }) },
-          )
-
-          .post("/users/change-password", async ({ body, set, userId }) => {
-            const user = db.findById(userId);
-
-            if (!user) {
-              set.status = 404;
-              return { error: "Користувача не знайдено" };
-            }
-
-            const valid = await bcrypt.compare(
-              body.currentPassword,
-              user.passwordHash,
-            );
-
-            if (!valid) {
-              set.status = 401;
-              return { error: "Неправильний пароль" };
-            }
-
-            const passwordHash = await bcrypt.hash(body.newPassword, 10);
-
-            db.changePassword(userId, passwordHash);
-            return { message: "Пароль успішно змінено" };
-          },
-            {
-              body: t.Object({
-                currentPassword: t.String(),
-                newPassword: t.String({ minLength: 6 })
-              })
-            }
-        )
 
       .get(
         "/api/users/:userId/museums",
@@ -244,7 +295,7 @@ const app = new Elysia()
         "/api/users/:userId/museums",
         async ({ params, body, set }) => {
           const { userId } = params;
-          
+
           const { name, rooms, roomCount, tags } = body;
 
           const newMuseum = {
@@ -262,7 +313,7 @@ const app = new Elysia()
           db.createMuseum(userId, newMuseum);
 
           set.status = 201;
-          
+
           return newMuseum;
         },
         {
@@ -278,7 +329,7 @@ const app = new Elysia()
 
       .patch(
         "/api/museums/:museumId",
-        async ({ params, body, set, userId }) => { 
+        async ({ params, body, set, userId }) => {
           const { museumId } = params;
           const { name, published } = body;
 
@@ -295,7 +346,7 @@ const app = new Elysia()
           }
 
           if (name !== undefined) {
-            await db.updateMuseum(userId, museumId, name); 
+            await db.updateMuseum(userId, museumId, name);
           }
 
           if (published !== undefined) {
@@ -335,7 +386,7 @@ const app = new Elysia()
 
       .get("/secured", ({ some }) => {
         return some;
-      })
+      }),
   )
   .listen(3000);
 console.log("Сервер на http://localhost:3000");
