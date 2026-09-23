@@ -1142,19 +1142,29 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
   }
 
   // Load gallery (published museums) with pagination
-  const loadGallery = async (pageNum = 1) => {
+  // Оновлена функція завантаження галереї
+  const loadGallery = async (
+    pageNum = 1,
+    currentSearch = search,
+    currentTags = filterTags,
+    currentSort = sortBy,
+  ) => {
     setIsLoadingMore(true);
     try {
-      const response = await museumService.getGallery(pageNum); // Передаємо номер сторінки
+      const response = await museumService.getGallery(
+        pageNum,
+        24,
+        currentSearch,
+        currentTags,
+        currentSort,
+      );
 
-      console.log("ВІДПОВІДЬ СЕРВЕРА:", response);
-      // Дані, що прийшли з бекенду
       const newData = response.data || [];
 
       if (pageNum === 1) {
-        setGallery(newData);
+        setGallery(newData); // Якщо це перша сторінка — перезаписуємо масив
       } else {
-        setGallery((prev) => [...prev, ...newData]); // Доклеюємо нові картки
+        setGallery((prev) => [...prev, ...newData]); // Якщо наступна — доклеюємо
       }
 
       setGalleryTotalPages(response.totalPages || 1);
@@ -1167,21 +1177,22 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
   };
 
   // Слідкуємо за тим, коли loaderRef з'явиться на екрані
+  // Слідкуємо за тим, коли loaderRef з'явиться на екрані
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         const target = entries[0];
-        // Якщо догортали до низу, ми не вантажимо інше, і є ще сторінки
         if (
           target.isIntersecting &&
           !isLoadingMore &&
           galleryPage < galleryTotalPages
         ) {
-          loadGallery(galleryPage + 1);
+          // Передаємо поточні фільтри при завантаженні наступної сторінки!
+          loadGallery(galleryPage + 1, search, filterTags, sortBy);
         }
       },
       {
-        rootMargin: "200px", // Починаємо завантаження за 200px до того, як користувач дійде до самого кінця
+        rootMargin: "200px",
       },
     );
 
@@ -1194,11 +1205,24 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
         observer.unobserve(loaderRef.current);
       }
     };
-  }, [isLoadingMore, galleryPage, galleryTotalPages]); // Оновлюємо обзервер при зміні цих станів
+  }, [
+    isLoadingMore,
+    galleryPage,
+    galleryTotalPages,
+    search,
+    filterTags,
+    sortBy,
+  ]); // ДОДАНО: search, filterTags, sortBy // Оновлюємо обзервер при зміні цих станів
 
   useEffect(() => {
-    loadGallery(1); // Завантажуємо першу сторінку при старті
-  }, []);
+    // Встановлюємо таймер на 400мс (debounce), щоб не спамити сервер під час швидкого друку
+    const timer = setTimeout(() => {
+      // Скидаємо на 1-шу сторінку при будь-якій зміні фільтрів
+      loadGallery(1, search, filterTags, sortBy);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search, filterTags, sortBy]);
 
   // Load user's museums when user changes
   useEffect(() => {
@@ -1227,12 +1251,6 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
     const updated = await museumService.setPublished(user.id, id, published);
     setSaved((prev) => prev.map((m) => (m.id === id ? updated : m)));
     setGallery(await museumService.getGallery());
-  }
-
-  async function handleVersionRestore(updatedMuseum) {
-    setSaved((prev) =>
-      prev.map((m) => (m.id === updatedMuseum.id ? updatedMuseum : m)),
-    );
   }
 
   function handleOpen(museum, fromGallery = false) {
@@ -1497,11 +1515,6 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
               onBlur={() => setTabFocus(null)}
             >
               Gallery
-              {gallery?.length > 0 && (
-                <span style={S.tabCount(tab === "gallery")}>
-                  {gallery.length}
-                </span>
-              )}
             </button>
             <button
               style={S.tab(tab === "mine", tabFocus === "mine")}
@@ -1651,42 +1664,29 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
                 (() => {
                   if (gallery === null)
                     return <div style={S.loadingRow}>Loading…</div>;
-                  let filtered = gallery.filter((m) =>
-                    m.name?.toLowerCase().includes(search.toLowerCase()),
-                  );
-                  if (filterTags.length > 0)
-                    filtered = filtered.filter((m) =>
-                      filterTags.some((t) => (m.tags ?? []).includes(t)),
-                    );
-                  filtered = [...filtered].sort((a, b) => {
-                    if (sortBy === "oldest")
-                      return new Date(a.createdAt) - new Date(b.createdAt);
-                    if (sortBy === "popular")
+
+                  if (gallery.length === 0) {
+                    if (search || filterTags.length > 0) {
                       return (
-                        (b.visits ?? getVisits(b.id)) -
-                        (a.visits ?? getVisits(a.id))
+                        <EmptyState
+                          text="No results."
+                          hint="Try different search or tags."
+                        />
                       );
-                    if (sortBy === "az") return a.name.localeCompare(b.name);
-                    return new Date(b.createdAt) - new Date(a.createdAt); // newest
-                  });
-                  if (gallery.length === 0)
+                    }
+                    // Якщо галерея взагалі порожня
                     return (
                       <EmptyState
                         text="No museums in the gallery."
                         hint="Check back later."
                       />
                     );
-                  if (filtered.length === 0)
-                    return (
-                      <EmptyState
-                        text="No results."
-                        hint="Try different search or tags."
-                      />
-                    );
+                  }
                   return (
                     <div>
                       <div style={S.tileGrid}>
-                        {filtered.map((m) => (
+                        {gallery.map((m) => (
+                          // Просто беремо gallery, ніяких filtered!
                           <MuseumTile
                             key={m.id}
                             museum={m}
@@ -1697,7 +1697,7 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
                         ))}
                       </div>
 
-                      {/* Це наш тригер для IntersectionObserver */}
+                      {/* Тригер для IntersectionObserver */}
                       {galleryPage < galleryTotalPages && (
                         <div
                           ref={loaderRef}

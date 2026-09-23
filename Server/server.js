@@ -7,11 +7,15 @@ const users = [];
 const museums = Array.from({ length: 1000 }).map((_, index) => {
   const isPublished = index % 5 !== 0; // 80% будуть опубліковані, 20% - ні
   const themes = [
-    "Мистецтво",
-    "Історія",
-    "Космос",
-    "Технології",
-    "Палеонтологія",
+    "AI",
+    "Biology",
+    "Physics",
+    "History",
+    "Art",
+    "Computer Science",
+    "Mathematics",
+    "Chemistry",
+    "Other",
   ];
 
   return {
@@ -20,11 +24,7 @@ const museums = Array.from({ length: 1000 }).map((_, index) => {
     name: `Музей ${themes[index % themes.length]} №${index + 1}`,
     rooms: [{}, {}, {}], // 3 порожні кімнати для заглушки
     roomCount: 3,
-    tags: [
-      "тест",
-      "автогенерація",
-      themes[index % themes.length].toLowerCase(),
-    ],
+    tags: ["тест", "автогенерація", themes[index % themes.length]],
     published: isPublished,
     createdAt: new Date(Date.now() - Math.random() * 10000000000).toISOString(), // Випадкова дата в минулому
     updatedAt: new Date().toISOString(),
@@ -131,10 +131,41 @@ const app = new Elysia()
       const page = parseInt(query.page ?? "1");
       const limit = parseInt(query.limit ?? "20");
 
-      const allMuseums = db.getGallery();
+      const searchQuery = query.search?.toLowerCase() || "";
+
+      const sort = query.sort || "newest";
+      const tagsQuery = query.tags || "";
+
+      let allMuseums = db.getGallery();
       if (isPublished) {
-        allMuseums.filter((m) => m.published === true);
+        allMuseums = allMuseums.filter((m) => m.published === true);
       }
+
+      if (searchQuery) {
+        allMuseums = allMuseums.filter((m) =>
+          m.name?.toLowerCase().includes(searchQuery),
+        );
+      }
+
+      if (tagsQuery) {
+        const selectedTags = tagsQuery.split(",");
+        allMuseums = allMuseums.filter((m) =>
+          selectedTags.some((tag) => (m.tags ?? []).includes(tag)),
+        );
+      }
+
+      allMuseums.sort((a, b) => {
+        if (sort === "oldest")
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        if (sort === "popular") return (b.visits ?? 0) - (a.visits ?? 0);
+        if (sort === "az") return a.name.localeCompare(b.name);
+
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
 
       const startIndex = (page - 1) * limit;
       const endIndex = page * limit;
@@ -154,6 +185,9 @@ const app = new Elysia()
         published: t.Optional(t.String()),
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+        tags: t.Optional(t.String()),
+        sort: t.Optional(t.String()),
       }),
     },
   )

@@ -59,11 +59,22 @@ export const museumService = {
   },
 
   /** All museums marked as published (across all users). */
-  async getGallery(page = 1, limit = 24) {
+  async getGallery(
+    page = 1,
+    limit = 24,
+    search = "",
+    tags = [],
+    sort = "newest",
+  ) {
     try {
-      const res = await apiFetch(
-        `/museums?published=true&page=${page}&limit=${limit}`,
-      );
+      let url = `/museums?published=true&page=${page}&limit=${limit}&sort=${sort}`;
+
+      if (search) {
+        url += `&search=${encodeURIComponent(search)}`;
+      }
+      if (tags.length > 0) url += `&tags=${encodeURIComponent(tags.join(","))}`;
+
+      const res = await apiFetch(url);
       if (!res.ok) {
         throw new Error("Помилка при отриманні галереї");
       }
