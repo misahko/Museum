@@ -22,7 +22,7 @@ const STORE_KEY = "museum_data_v1";
 
 // ── Storage helpers ────────────────────────────────────────────────────────────
 
-function load() {
+/*function load() {
   try {
     return JSON.parse(localStorage.getItem(STORE_KEY) ?? "{}");
   } catch {
@@ -38,7 +38,7 @@ function userMuseums(data, userId) {
 function writeUserMuseums(data, userId, museums) {
   return { ...data, [userId]: { ...data[userId], museums } };
 }
-
+*/
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 export const museumService = {
@@ -66,7 +66,7 @@ export const museumService = {
   async getGallery() {
     try
     {
-      const res = await apiFetch(`/api/museums?published=true`);
+      const res = await apiFetch('/api/museums?published=true');
       if (!res.ok)
       {
         throw new Error ("Помилка при отриманні галереї");

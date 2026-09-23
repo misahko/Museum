@@ -36,10 +36,10 @@ const db = {
   },
 
   getMuseumById: (id) => {
-    return "{}";
+    return null;
   },
 
-  createMuseum: (userId, { name, rooms, roomCount, tags }) => {},
+  createMuseum: (userId, museum) => {},
 
   removeMuseum: (userId, museumId) => {},
 
@@ -55,12 +55,12 @@ const app = new Elysia()
       name: "jwt",
       secret: process.env.JWT_SECRET ?? "dev-secret-change-me",
       exp: "7d",
-    })
-      .get(
+    }))
+    .get(
         "/api/museums",
         async ({ query }) => {
           const isPublished = query.published === "true";
-          const allMuseums = await getAllMuseumsFromDb();
+          const allMuseums = await db.getGallery();
           if (isPublished) {
             return allMuseums.filter((m) => m.published === true);
           }
@@ -68,6 +68,25 @@ const app = new Elysia()
         },
         {
           query: t.Object({ published: t.Optional(t.String) }),
+        },
+      )
+
+      .get(
+        "/api/museums/:id",
+        async ({ params, set }) => {
+          const { id } = params;
+
+          const museum = await db.getMuseumById(id);
+
+          if (!museum) {
+            set.status = 404;
+            throw new Error("Музей не знайдено");
+          }
+
+          return museum;
+        },
+        {
+          params: t.Object({ id: t.String() }),
         },
       )
       .post(
@@ -187,7 +206,7 @@ const app = new Elysia()
             }
 
             const valid = await bcrypt.compare(
-              body.password,
+              body.currentPassword,
               user.passwordHash,
             );
 
@@ -209,31 +228,11 @@ const app = new Elysia()
             }
         )
 
-
-      .get(
-        "/api/museums/:id",
-        async ({ params, set }) => {
-          const { id } = params;
-
-          const museum = await getMuseumById(id);
-
-          if (!museum) {
-            set.status = 404;
-            throw new Error("Музей не знайдено");
-          }
-
-          return museum;
-        },
-        {
-          params: t.Object({ id: t.String() }),
-        },
-      )
-
       .get(
         "/api/users/:userId/museums",
         async ({ params }) => {
-          const userId = params;
-          const museums = getUserMuseums(userId) ?? [];
+          const { userId } = params;
+          const museums = db.getUserMuseums(userId) ?? [];
           return museums;
         },
         {
@@ -245,21 +244,26 @@ const app = new Elysia()
         "/api/users/:userId/museums",
         async ({ params, body, set }) => {
           const { userId } = params;
+          
+          const { name, rooms, roomCount, tags } = body;
+
           const newMuseum = {
             id: crypto.randomUUID(),
-            name: body.name,
-            rooms: body.rooms,
-            roomCount: body.roomCount ?? body.rooms.length,
-            tags: body.tags ?? [],
+            name,
+            rooms,
+            roomCount: roomCount ?? rooms.length,
+            tags: tags ?? [],
             published: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             versions: [],
           };
 
-          createMuseum(userId, { name, rooms, roomCount, tags });
+          db.createMuseum(userId, newMuseum);
 
           set.status = 201;
+          
+          return newMuseum;
         },
         {
           params: t.Object({ userId: t.String() }),
@@ -274,18 +278,16 @@ const app = new Elysia()
 
       .patch(
         "/api/museums/:museumId",
-        async ({ params, body, set, user }) => {
+        async ({ params, body, set, userId }) => { 
           const { museumId } = params;
           const { name, published } = body;
-
-          const userId = user.id;
 
           if (name === undefined && published === undefined) {
             set.status = 400;
             throw new Error("Немає даних для оновлення");
           }
 
-          const museum = await getMuseumById(museumId);
+          const museum = await db.getMuseumById(museumId);
 
           if (!museum) {
             set.status = 404;
@@ -293,12 +295,14 @@ const app = new Elysia()
           }
 
           if (name !== undefined) {
-            await updateMuseum(userId, museumId, name);
+            await db.updateMuseum(userId, museumId, name); 
           }
 
           if (published !== undefined) {
-            await setMuseumPublished(userId, museumId, published);
+            await db.setMuseumPublished(userId, museumId, published);
           }
+
+          return await db.getMuseumById(museumId);
         },
         {
           params: t.Object({ museumId: t.String() }),
@@ -311,18 +315,18 @@ const app = new Elysia()
 
       .delete(
         "/api/museums/:museumId",
-        async ({ params, set, user }) => {
+        async ({ params, set, userId }) => {
           const { museumId } = params;
-          const userId = user.id;
 
-          const museum = await getMuseumById(museumId);
+          const museum = await db.getMuseumById(museumId);
 
           if (!museum) {
             set.status = 404;
             throw new Error("Музей не знайдено");
           }
 
-          await removeMuseum(userId, museumId);
+          await db.removeMuseum(userId, museumId);
+          return { message: "Музей успішно видалено" };
         },
         {
           params: t.Object({ museumId: t.String() }),
@@ -331,7 +335,7 @@ const app = new Elysia()
 
       .get("/secured", ({ some }) => {
         return some;
-      }),
+      })
   )
   .listen(3000);
 console.log("Сервер на http://localhost:3000");
