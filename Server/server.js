@@ -2,84 +2,112 @@ import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { cors } from "@elysiajs/cors";
 import bcrypt from "bcryptjs";
+import { eq, and, or } from "drizzle-orm";
+import { dbConnection } from "./db";
+import { usersTable, museumsTable } from "./schema"
+import { RepeatWrapping } from "three";
 
 let users = [];
 let museums = [];
 
 const db = {
-  getUserByEmail: (email) => {
-    return users.find(
-      (user) => user.email.toLocaleLowerCase() === email.toLocaleLowerCase(),
-    );
+  getUserByEmail: async (email) => {
+    const result = await dbConnection
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.email, email.toLowerCase()));
+    return result[0] || null;
   },
-  getUserById: (userId) => {
-    return users.find((user) => user.id === userId);
+  getUserById: async (userId) => {
+    const result = await dbConnection
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+    return result[0] || null;
   },
-  createNewUser: (user) => {
-    users.push(user);
+  createNewUser: async (user) => {
+    const result = await dbConnection
+    .insert(usersTable)
+    .values(user)
+    .returning();
+    return result[0] || null;
   },
-  renameUser: (userId, newName) => {
-    const user = db.getUserById(userId);
-    user.name = newName;
-    return user;
+  renameUser: async (userId, newName) => {
+    const result = await dbConnection
+    .update(usersTable)
+    .set({name: newName})
+    .where(eq(usersTable.id, userId))
+    .returning();
+    return result[0] || null;
   },
-  changeUserPassword: (userId, newPassword) => {
-    const user = db.getUserById(userId);
-    user.passwordHash = newPassword;
+  changeUserPassword: async (userId, newPassword) => {
+    const result = await dbConnection
+    .update(usersTable)
+    .set({passwordHash: newPassword})
+    .where(eq(usersTable.id, userId))
+    .returning();
+    return result[0] || null;
   },
 
-  removeUser: (userId) => {
-    const index = users.findIndex((u) => u.id === userId);
-    if (index !== -1) {
-      users.splice(index, 1); // Видаляємо користувача з масиву
-      return true;
-    }
-    return false;
+  removeUser: async (userId) => {
+    const result = await dbConnection
+    .delete(usersTable)
+    .where(eq(usersTable.id,userId))
+    .returning({ deletedId: usersTable.id });
+    return result.length > 0;
   },
 
-  getUserMuseums: (userId) => {
-    return museums.filter((m) => m.userId === userId);
+  getUserMuseums: async (userId) => {
+    const result = await dbConnection
+    .select()
+    .from(museumsTable)
+    .where(eq(museumsTable.userId,userId));
+    return result;
   },
-  getGallery: () => {
-    return museums;
+  getGallery: async () => {
+    const result = await dbConnection
+    .select()
+    .from(museumsTable)
+    .where(eq(museumsTable.published,true));
+
+    return result;
   },
-  getMuseumById: (id) => {
-    return museums.find((m) => m.id === id) ?? null;
+  getMuseumById: async (id) => {
+    const result = await dbConnection
+    .select()
+    .from(museumsTable)
+    .where(eq(museumsTable.id,id));
+    return result[0] || null;
   },
-  createMuseum: (userId, museum) => {
-    const museumWithOwner = { ...museum, userId };
-    museums.push(museumWithOwner);
-    return museumWithOwner;
+  createMuseum: async (userId, museum) => {
+    const result = await dbConnection
+    .insert(museumsTable)
+    .values(museum)
+    .returning();
+    return result[0] || null;
   },
-  removeMuseum: (userId, museumId) => {
-    const index = museums.findIndex(
-      (m) => m.id === museumId && m.userId === userId,
-    );
-    if (index !== -1) {
-      museums.splice(index, 1);
-      return true;
-    }
-    return false;
+  removeMuseum: async (userId, museumId) => {
+    const result = await dbConnection
+    .delete(museumsTable)
+    .where(and(eq(museumsTable.userId,userId),eq(museumsTable.id,museumId)))
+    .returning({ deletedId: museumsTable.id });
+    return result.length > 0;
   },
-  updateMuseum: (userId, museumId, name) => {
-    const museum = museums.find(
-      (m) => m.id === museumId && m.userId === userId,
-    );
-    if (museum) {
-      museum.name = name;
-      museum.updatedAt = new Date().toISOString();
-    }
-    return museum;
+  updateMuseum: async (userId, museumId, name) => {
+    const result = await dbConnection
+    .update(museumsTable)
+    .set({name: name})
+    .where(and(eq(museumsTable.userId,userId),eq(museumsTable.id,museumId)))
+    .returning();
+    return result[0] || null;
   },
-  setMuseumPublished: (userId, museumId, value) => {
-    const museum = museums.find(
-      (m) => m.id === museumId && m.userId === userId,
-    );
-    if (museum) {
-      museum.published = value;
-      museum.updatedAt = new Date().toISOString();
-    }
-    return museum;
+  setMuseumPublished: async (userId, museumId, value) => {
+    const result = await dbConnection
+    .update(museumsTable)
+    .set({published: value})
+    .where(and(eq(museumsTable.userId,userId),eq(museumsTable.id,museumId)))
+    .returning();
+    return result[0] || null;
   },
 };
 
@@ -110,7 +138,7 @@ const app = new Elysia()
       const sort = query.sort || "newest";
       const tagsQuery = query.tags || "";
 
-      let allMuseums = db.getGallery();
+      let allMuseums = await db.getGallery();
       if (isPublished) {
         allMuseums = allMuseums.filter((m) => m.published === true);
       }
@@ -187,7 +215,7 @@ const app = new Elysia()
   .post(
     "/auth/login",
     async ({ body, set, jwt }) => {
-      const user = db.getUserByEmail(body.email);
+      const user = await db.getUserByEmail(body.email);
 
       if (!user) {
         set.status = 401;
@@ -217,7 +245,7 @@ const app = new Elysia()
   .post(
     "/auth/register",
     async ({ body, set, jwt }) => {
-      const existing = db.getUserByEmail(body.email);
+      const existing = await db.getUserByEmail(body.email);
       if (existing) {
         set.status = 409;
         return { error: "Почта вже зайнята" };
@@ -232,7 +260,7 @@ const app = new Elysia()
         email: body.email,
       };
 
-      db.createNewUser(user);
+      await db.createNewUser(user);
 
       const token = await jwt.sign({ sub: user.id });
 
@@ -266,7 +294,7 @@ const app = new Elysia()
           throw new Error("Невірний токен");
         }
 
-        const user = db.getUserById(payload.sub);
+        const user = await db.getUserById(payload.sub);
 
         if (!user) {
           set.status = 401;
@@ -280,14 +308,14 @@ const app = new Elysia()
       .patch(
         "/users/me",
         async ({ body, set, userId }) => {
-          const user = db.getUserById(userId);
+          const user = await db.getUserById(userId);
 
           if (!user) {
             set.status = 401;
             return { error: "Користувача не знайдено" };
           }
 
-          const newUser = db.renameUser(userId, body.name);
+          const newUser = await db.renameUser(userId, body.name);
 
           return {
             message: "Ім'я оновлено",
@@ -304,7 +332,7 @@ const app = new Elysia()
       .delete(
         "/users/me",
         async ({ body, set, userId }) => {
-          const user = db.getUserById(userId);
+          const user = await db.getUserById(userId);
 
           if (!user) {
             set.status = 401;
@@ -318,7 +346,7 @@ const app = new Elysia()
             return { error: "Неправильний пароль" };
           }
 
-          db.removeUser(userId);
+          await db.removeUser(userId);
 
           return {
             message: "Користувача видалено",
@@ -332,7 +360,7 @@ const app = new Elysia()
       .post(
         "/users/change-password",
         async ({ body, set, userId }) => {
-          const user = db.getUserById(userId);
+          const user = await db.getUserById(userId);
 
           if (!user) {
             set.status = 401;
@@ -348,7 +376,7 @@ const app = new Elysia()
 
           const passwordHash = await bcrypt.hash(body.newPassword, 10);
 
-          db.changeUserPassword(userId, passwordHash);
+          await db.changeUserPassword(userId, passwordHash);
           return { message: "Пароль успішно змінено" };
         },
         {
@@ -364,7 +392,7 @@ const app = new Elysia()
         async ({ userId, query }) => {
           const searchQuery = query.search?.toLowerCase() || "";
 
-          let museums = db.getUserMuseums(userId) ?? [];
+          let museums = await db.getUserMuseums(userId) ?? [];
           if (searchQuery) {
             museums = museums.filter((m) =>
               m.name?.toLowerCase().includes(searchQuery),
@@ -384,17 +412,17 @@ const app = new Elysia()
 
           const newMuseum = {
             id: crypto.randomUUID(),
+            userId: userId,
             name,
             rooms,
             roomCount: roomCount ?? rooms.length,
             tags: tags ?? [],
             published: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            versions: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
           };
 
-          db.createMuseum(userId, newMuseum);
+          await db.createMuseum(userId, newMuseum);
 
           set.status = 201;
 
