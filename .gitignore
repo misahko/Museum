@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+Server/.env
+LLMSorting/__pycache__/
+LLMSorting/Tools/__pycache__/

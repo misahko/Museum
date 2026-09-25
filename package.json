@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "start": "concurrently --names \"vite,llm\" --prefix-colors \"cyan,yellow\" \"vite\" \"python3 LLMSorting/server.py\"",
+    "start": "concurrently --names \"vite,llm,server\" --prefix-colors \"cyan,yellow,magenta\" \"vite\" \"python3 LLMSorting/server.py\" \"bun run Server/server.js\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
