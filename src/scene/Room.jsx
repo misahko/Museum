@@ -1,12 +1,12 @@
-import { Suspense, useEffect, useMemo, useRef } from 'react';
-import { useGLTF, Html } from '@react-three/drei';
-import { useFrame, useThree } from '@react-three/fiber';
-import { RigidBody, CuboidCollider } from '@react-three/rapier';
-import * as THREE from 'three';
-import { applyReplacements } from './replaceObjects';
-import { ExhibitPanel } from './exhibits/ExhibitPanel';
-import { HoloPanel, StandPanel } from './exhibits/HoloPanel';
-import { BoxRoom } from './BoxRoom';
+import { Suspense, useEffect, useMemo, useRef } from "react";
+import { useGLTF, Html } from "@react-three/drei";
+import { useFrame, useThree } from "@react-three/fiber";
+import { RigidBody, CuboidCollider } from "@react-three/rapier";
+import * as THREE from "three";
+import { applyReplacements } from "./replaceObjects";
+import { ExhibitPanel } from "./exhibits/ExhibitPanel";
+import { HoloPanel, StandPanel } from "./exhibits/HoloPanel";
+import { BoxRoom } from "./BoxRoom";
 
 // ─── GLTF room ───────────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ function GltfRoomContent({ config }) {
         <CuboidCollider args={[50, 0.1, 50]} position={[0, -0.1, 0]} />
       </RigidBody>
 
-      {(config.replacements ?? []).map(r => (
+      {(config.replacements ?? []).map((r) => (
         <Suspense key={r.name} fallback={null}>
           <ReplacementLoader name={r.name} modelPath={r.model} scene={scene} />
         </Suspense>
@@ -49,7 +49,7 @@ function Particles({ count = 55, spread = 5, maxH = 3.6 }) {
   const positions = useMemo(() => {
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      arr[i * 3]     = (Math.random() - 0.5) * spread * 2;
+      arr[i * 3] = (Math.random() - 0.5) * spread * 2;
       arr[i * 3 + 1] = Math.random() * maxH;
       arr[i * 3 + 2] = (Math.random() - 0.5) * spread * 2;
     }
@@ -61,9 +61,9 @@ function Particles({ count = 55, spread = 5, maxH = 3.6 }) {
     const pos = ref.current.geometry.attributes.position.array;
     for (let i = 0; i < count; i++) {
       pos[i * 3 + 1] += dt * (0.025 + Math.sin(i * 1.3) * 0.012);
-      pos[i * 3]     += dt * Math.sin(i * 2.1) * 0.008;
+      pos[i * 3] += dt * Math.sin(i * 2.1) * 0.008;
       if (pos[i * 3 + 1] > maxH) {
-        pos[i * 3]     = (Math.random() - 0.5) * spread * 2;
+        pos[i * 3] = (Math.random() - 0.5) * spread * 2;
         pos[i * 3 + 1] = 0.05;
         pos[i * 3 + 2] = (Math.random() - 0.5) * spread * 2;
       }
@@ -76,7 +76,13 @@ function Particles({ count = 55, spread = 5, maxH = 3.6 }) {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
-      <pointsMaterial size={0.022} color="#b0b8d8" transparent opacity={0.35} sizeAttenuation />
+      <pointsMaterial
+        size={0.022}
+        color="#b0b8d8"
+        transparent
+        opacity={0.35}
+        sizeAttenuation
+      />
     </points>
   );
 }
@@ -84,10 +90,10 @@ function Particles({ count = 55, spread = 5, maxH = 3.6 }) {
 // ─── Portal marker ────────────────────────────────────────────────────────────
 // Small decorative arch with proximity teleport. No wall opening required.
 
-const TRIGGER_DIST = 1.6;
+const TRIGGER_DIST = 1;
 const PILLAR_H = 1.85;
-const ARCH_SPAN = 0.58;   // half-width (arch radius)
-const ARCH_C = '#00cfff';
+const ARCH_SPAN = 0.58; // half-width (arch radius)
+const ARCH_C = "#00cfff";
 
 function PortalMarker({ config, scene, onTeleport }) {
   const position = useMemo(() => {
@@ -102,8 +108,8 @@ function PortalMarker({ config, scene, onTeleport }) {
     return config.position ?? [0, 1.5, 2];
   }, [config, scene]);
 
-  const portalVec  = useMemo(() => new THREE.Vector3(...position), [position]);
-  const triggered  = useRef(false);
+  const portalVec = useMemo(() => new THREE.Vector3(...position), [position]);
+  const triggered = useRef(false);
   const { camera } = useThree();
 
   useFrame(() => {
@@ -125,31 +131,60 @@ function PortalMarker({ config, scene, onTeleport }) {
       {/* Left pillar */}
       <mesh position={[0, PILLAR_H / 2, -ARCH_SPAN]}>
         <cylinderGeometry args={[0.09, 0.11, PILLAR_H, 8]} />
-        <meshStandardMaterial color={ARCH_C} emissive={ARCH_C} emissiveIntensity={0.45} />
+        <meshStandardMaterial
+          color={ARCH_C}
+          emissive={ARCH_C}
+          emissiveIntensity={0.45}
+        />
       </mesh>
       {/* Right pillar */}
       <mesh position={[0, PILLAR_H / 2, ARCH_SPAN]}>
         <cylinderGeometry args={[0.09, 0.11, PILLAR_H, 8]} />
-        <meshStandardMaterial color={ARCH_C} emissive={ARCH_C} emissiveIntensity={0.45} />
+        <meshStandardMaterial
+          color={ARCH_C}
+          emissive={ARCH_C}
+          emissiveIntensity={0.45}
+        />
       </mesh>
       {/* Arch ring in YZ plane — spans z±ARCH_SPAN, peaks at y=PILLAR_H+ARCH_SPAN */}
       <mesh position={[0, PILLAR_H, 0]} rotation={[0, Math.PI / 2, 0]}>
         <torusGeometry args={[ARCH_SPAN, 0.065, 8, 20, Math.PI]} />
-        <meshStandardMaterial color={ARCH_C} emissive={ARCH_C} emissiveIntensity={0.65} />
+        <meshStandardMaterial
+          color={ARCH_C}
+          emissive={ARCH_C}
+          emissiveIntensity={0.65}
+        />
       </mesh>
       {/* Subtle glow plane (DoubleSide so visible from both walls) */}
       <mesh position={[0, PILLAR_H / 2, 0]} rotation={[0, Math.PI / 2, 0]}>
         <planeGeometry args={[ARCH_SPAN * 2, PILLAR_H]} />
-        <meshStandardMaterial color={ARCH_C} emissive={ARCH_C} emissiveIntensity={0.1} transparent opacity={0.18} side={2} />
+        <meshStandardMaterial
+          color={ARCH_C}
+          emissive={ARCH_C}
+          emissiveIntensity={0.1}
+          transparent
+          opacity={0.18}
+          side={2}
+        />
       </mesh>
       {/* Label */}
-      <Html center distanceFactor={5} position={[0, PILLAR_H + ARCH_SPAN + 0.22, 0]}>
-        <div style={{
-          color: '#fff', background: 'rgba(0,0,0,0.78)',
-          border: '1px solid #00cfff', borderRadius: 4,
-          padding: '4px 12px', fontSize: 13,
-          whiteSpace: 'nowrap', pointerEvents: 'none',
-        }}>
+      <Html
+        center
+        distanceFactor={5}
+        position={[0, PILLAR_H + ARCH_SPAN + 0.22, 0]}
+      >
+        <div
+          style={{
+            color: "#fff",
+            background: "rgba(0,0,0,0.78)",
+            border: "1px solid #00cfff",
+            borderRadius: 4,
+            padding: "4px 12px",
+            fontSize: 13,
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+          }}
+        >
           {config.label}
         </div>
       </Html>
@@ -169,28 +204,30 @@ function PortalMarker({ config, scene, onTeleport }) {
 export function Room({ config, onTeleport }) {
   return (
     <>
-      {config.model
-        ? (
-          <Suspense fallback={null}>
-            <GltfRoomContent config={config} />
-          </Suspense>
-        )
-        : (
-          <BoxRoom
-            wallColor={config.wallColor}
-            accentColor={config.accentColor}
-            big={config.big ?? false}
-          />
-        )
-      }
+      {config.model ? (
+        <Suspense fallback={null}>
+          <GltfRoomContent config={config} />
+        </Suspense>
+      ) : (
+        <BoxRoom
+          wallColor={config.wallColor}
+          accentColor={config.accentColor}
+          big={config.big ?? false}
+        />
+      )}
 
-      {config.portals.map(p => (
-        <PortalMarker key={p.targetRoom} config={p} scene={null} onTeleport={onTeleport} />
+      {config.portals.map((p) => (
+        <PortalMarker
+          key={p.targetRoom}
+          config={p}
+          scene={null}
+          onTeleport={onTeleport}
+        />
       ))}
 
       {(config.exhibits ?? []).map((ex, i) => {
-        if (ex.displayType === 'hologram') return <HoloPanel  key={i} {...ex} />;
-        if (ex.displayType === 'stand')    return <StandPanel key={i} {...ex} />;
+        if (ex.displayType === "hologram") return <HoloPanel key={i} {...ex} />;
+        if (ex.displayType === "stand") return <StandPanel key={i} {...ex} />;
         return <ExhibitPanel key={i} {...ex} />;
       })}
 

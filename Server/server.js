@@ -4,109 +4,112 @@ import { cors } from "@elysiajs/cors";
 import bcrypt from "bcryptjs";
 import { eq, and, or } from "drizzle-orm";
 import { dbConnection } from "./db";
-import { usersTable, museumsTable } from "./schema"
+import { usersTable, museumsTable } from "./schema";
 import { RepeatWrapping } from "three";
-
-let users = [];
-let museums = [];
 
 const db = {
   getUserByEmail: async (email) => {
     const result = await dbConnection
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.email, email.toLowerCase()));
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email.toLowerCase()));
     return result[0] || null;
   },
   getUserById: async (userId) => {
     const result = await dbConnection
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.id, userId));
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, userId));
     return result[0] || null;
   },
   createNewUser: async (user) => {
     const result = await dbConnection
-    .insert(usersTable)
-    .values(user)
-    .returning();
+      .insert(usersTable)
+      .values(user)
+      .returning();
     return result[0] || null;
   },
   renameUser: async (userId, newName) => {
     const result = await dbConnection
-    .update(usersTable)
-    .set({name: newName})
-    .where(eq(usersTable.id, userId))
-    .returning();
+      .update(usersTable)
+      .set({ name: newName })
+      .where(eq(usersTable.id, userId))
+      .returning();
     return result[0] || null;
   },
   changeUserPassword: async (userId, newPassword) => {
     const result = await dbConnection
-    .update(usersTable)
-    .set({passwordHash: newPassword})
-    .where(eq(usersTable.id, userId))
-    .returning();
+      .update(usersTable)
+      .set({ passwordHash: newPassword })
+      .where(eq(usersTable.id, userId))
+      .returning();
     return result[0] || null;
   },
 
   removeUser: async (userId) => {
     const result = await dbConnection
-    .delete(usersTable)
-    .where(eq(usersTable.id,userId))
-    .returning({ deletedId: usersTable.id });
+      .delete(usersTable)
+      .where(eq(usersTable.id, userId))
+      .returning({ deletedId: usersTable.id });
     return result.length > 0;
   },
 
   getUserMuseums: async (userId) => {
     const result = await dbConnection
-    .select()
-    .from(museumsTable)
-    .where(eq(museumsTable.userId,userId));
+      .select()
+      .from(museumsTable)
+      .where(eq(museumsTable.userId, userId));
     return result;
   },
   getGallery: async () => {
     const result = await dbConnection
-    .select()
-    .from(museumsTable)
-    .where(eq(museumsTable.published,true));
+      .select()
+      .from(museumsTable)
+      .where(eq(museumsTable.published, true));
 
     return result;
   },
   getMuseumById: async (id) => {
     const result = await dbConnection
-    .select()
-    .from(museumsTable)
-    .where(eq(museumsTable.id,id));
+      .select()
+      .from(museumsTable)
+      .where(eq(museumsTable.id, id));
     return result[0] || null;
   },
   createMuseum: async (userId, museum) => {
     const result = await dbConnection
-    .insert(museumsTable)
-    .values(museum)
-    .returning();
+      .insert(museumsTable)
+      .values(museum)
+      .returning();
     return result[0] || null;
   },
   removeMuseum: async (userId, museumId) => {
     const result = await dbConnection
-    .delete(museumsTable)
-    .where(and(eq(museumsTable.userId,userId),eq(museumsTable.id,museumId)))
-    .returning({ deletedId: museumsTable.id });
+      .delete(museumsTable)
+      .where(
+        and(eq(museumsTable.userId, userId), eq(museumsTable.id, museumId)),
+      )
+      .returning({ deletedId: museumsTable.id });
     return result.length > 0;
   },
   updateMuseum: async (userId, museumId, name) => {
     const result = await dbConnection
-    .update(museumsTable)
-    .set({name: name})
-    .where(and(eq(museumsTable.userId,userId),eq(museumsTable.id,museumId)))
-    .returning();
+      .update(museumsTable)
+      .set({ name: name })
+      .where(
+        and(eq(museumsTable.userId, userId), eq(museumsTable.id, museumId)),
+      )
+      .returning();
     return result[0] || null;
   },
   setMuseumPublished: async (userId, museumId, value) => {
     const result = await dbConnection
-    .update(museumsTable)
-    .set({published: value})
-    .where(and(eq(museumsTable.userId,userId),eq(museumsTable.id,museumId)))
-    .returning();
+      .update(museumsTable)
+      .set({ published: value })
+      .where(
+        and(eq(museumsTable.userId, userId), eq(museumsTable.id, museumId)),
+      )
+      .returning();
     return result[0] || null;
   },
 };
@@ -123,6 +126,9 @@ const app = new Elysia()
   .onError(({ code, error, set }) => {
     if (code === "VALIDATION") {
       console.log("Помилка валідації body/params:", error.all);
+    } else {
+      // ДОДАЙТЕ ЦЕ, щоб бачити, чому падає сервер
+      console.error(`Помилка [${code}]:`, error);
     }
   })
   .get(
@@ -229,7 +235,7 @@ const app = new Elysia()
         return { error: "Невірна почта або пароль2" };
       }
 
-      console.log(user);
+      //console.log(user);
 
       const token = await jwt.sign({ sub: user.id });
 
@@ -301,7 +307,7 @@ const app = new Elysia()
           throw new Error("Користувача не знайдено");
         }
 
-        console.log("токен пройдений");
+        //console.log("токен пройдений");
 
         return { userId: payload.sub };
       })
@@ -392,7 +398,7 @@ const app = new Elysia()
         async ({ userId, query }) => {
           const searchQuery = query.search?.toLowerCase() || "";
 
-          let museums = await db.getUserMuseums(userId) ?? [];
+          let museums = (await db.getUserMuseums(userId)) ?? [];
           if (searchQuery) {
             museums = museums.filter((m) =>
               m.name?.toLowerCase().includes(searchQuery),

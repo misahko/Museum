@@ -1377,17 +1377,6 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
 
   const busy = phase === "parsing" || phase === "generating";
 
-  const DevFooter = () =>
-    import.meta.env.DEV ? (
-      <div style={S.footer}>
-        <code style={S.footerCode}>
-          cd LLMSorting &amp;&amp; python server.py
-        </code>
-        <span style={S.footerDot}>·</span>
-        <code style={S.footerCode}>ollama pull llama3</code>
-      </div>
-    ) : null;
-
   // ── Home view (tabs, full screen) ────────────────────────────────────────
 
   const focusStyle = (
@@ -1870,12 +1859,6 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
                 })()}
             </div>
           </div>
-
-          {import.meta.env.DEV && (
-            <div style={{ padding: "0 40px", flexShrink: 0 }}>
-              <DevFooter />
-            </div>
-          )}
         </div>
 
         {qrMuseum && (
