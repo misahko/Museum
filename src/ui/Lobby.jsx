@@ -1518,6 +1518,7 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
             >
               My Museums
             </button>
+            {/*
             <button
               style={S.tab(tab === "recent", tabFocus === "recent")}
               onClick={() => {
@@ -1535,7 +1536,7 @@ export function Lobby({ onMuseumReady, user, onAuth, onLogout }) {
                   {recent.length}
                 </span>
               )}
-            </button>
+            </button> */}
           </div>
 
           {/* Panel content */}
