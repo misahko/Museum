@@ -3,7 +3,6 @@ import json
 import ollama
 
 MODEL = "llama3"
-
 # Language instruction appended to every prompt so the LLM always responds
 # in the same language as the source material.
 _LANG_INSTRUCTION = (
@@ -14,13 +13,15 @@ _LANG_INSTRUCTION = (
 
 def extract_events(chunk: dict) -> list[dict]:
     """Stage 2: extract event cards from one chunk."""
+
+    """
     prompt = (
         "You are an expert data extraction assistant.\n"
         "Extract ALL events, achievements, publications, awards, appointments, projects, or roles from the text.\n\n"
         "EXTRACTION RULES:\n"
         "1. 'event': all sentences describing the event.\n"
-        "2. 'date': A 4-digit integer ONLY if explicitly mentioned (e.g., 2019). Otherwise, use null. No guesses, no day/month.\n"
-        "3. 'date_confidence': 'explicit' if a 4-digit year is found, otherwise null.\n"
+        "2. 'date': MUST be a SINGLE 4-digit integer (e.g., 2012). If the text contains a time range (like 2013-2016), extract ONLY the starting year (e.g., 2013). NO strings, NO ranges, NO dashes. If no year is mentioned, use null.\n"
+        "3. 'date_confidence': 'explicit' if a 4-digit year is found, otherwise null.ONLY use null if there is absolutely no year mentioned for that event.\n"
         "4. IGNORE: Table of contents, headers, footers, page numbers, figure labels, URLs, raw references.\n\n"
         "OUTPUT FORMAT:\n"
         "You MUST return ONLY a valid JSON array of objects. NO explanations, NO markdown formatting, NO preamble.\n"
@@ -29,16 +30,35 @@ def extract_events(chunk: dict) -> list[dict]:
         '{"event": "Appointed as lead researcher.", "date": null, "date_confidence": null}]\n\n'
         f"Text to analyze:\n{chunk['text']}" + _LANG_INSTRUCTION
     )
+    """
+
+    prompt = (
+        "You are an expert data extraction assistant.\n"
+        "Your task is to extract EVERY SINGLE event, job position, degree, dissertation, and achievement from the text.\n\n"
+        "EXTRACTION RULES:\n"
+        "1. BE COMPREHENSIVE: If the text lists 10 jobs, you MUST output 10 separate JSON objects. DO NOT summarize. DO NOT stop after one event.\n"
+        "2. 'event': Write a full sentence describing the specific job, degree, or achievement.\n"
+        "3. 'date': MUST be a SINGLE 4-digit integer (e.g., 2012). If the text contains a time range (like 2013-2016), extract ONLY the starting year (e.g., 2013). NO strings, NO ranges. If no year is mentioned, use null.\n"
+        "4. 'date_confidence': 'explicit' if a 4-digit year is found, otherwise null.\n"
+        "5. IGNORE: Table of contents, headers, footers.\n\n"
+        "OUTPUT FORMAT:\n"
+        "You MUST return ONLY a valid JSON array of objects. NO explanations.\n"
+        "Example:\n"
+        '[{"event": "Захистив кандидатську дисертацію з математичної кібернетики.", "date": null, "date_confidence": null}, '
+        '{"event": "Працював доцентом факультету кібернетики КНУ.", "date": 2001, "date_confidence": "explicit"}]\n\n'
+        f"Text to analyze:\n{chunk['text']}" + _LANG_INSTRUCTION
+    )
 
     response = ollama.chat(
         model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         # format="json",
-        options={"num_predict": 4096},
+        options={"num_predict": 8192, "num_ctx": 8192},
     )
 
     content = response["message"]["content"].strip()
     text = chunk["text"]
+    print(content)
     return [
         _validated_event(e, text, chunk["file_id"], chunk["chunk_index"])
         for e in _extract_json_array(content)
@@ -79,7 +99,7 @@ def name_cluster(representative_event: str) -> str:
     response = ollama.chat(
         model=MODEL,
         messages=[{"role": "user", "content": prompt}],
-        options={"num_predict": 128},
+        options={"num_predict": 16384},
     )
 
     return response["message"]["content"].strip()
@@ -91,7 +111,7 @@ def order_and_describe_bucket(events: list[dict]) -> dict:
     prompt = (
         "Analyze the following list of historical events and perform two tasks:\n"
         "1. Reorder them by cause-and-effect logic (chronological or logical progression).\n"
-        "2. Write a single, cohesive paragraph describing this thematic group.\n\n"
+        "2. Write a single, cohesive sentsnce describing this thematic group.\n\n"
         f"Events:\n{numbered}\n\n"
         "OUTPUT FORMAT:\n"
         "You MUST return ONLY a valid JSON object. NO preamble, NO explanations.\n"
@@ -103,7 +123,7 @@ def order_and_describe_bucket(events: list[dict]) -> dict:
         model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         # format="json",  # <--- ГАРАНТУЄ JSON
-        options={"num_predict": 8192},
+        options={"num_predict": 16384},
     )
 
     content = response["message"]["content"].strip()
