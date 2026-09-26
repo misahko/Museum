@@ -6,7 +6,7 @@ import pdfplumber
 
 # Змінюємо chunk_size з 300 на 120, а overlap з 50 на 25
 def extract_chunks(
-    file_path: str, chunk_size: int = 120, overlap: int = 25
+    file_path: str, chunk_size: int = 600, overlap: int = 50
 ) -> list[dict]:
     path = Path(file_path)
     with pdfplumber.open(file_path) as pdf:
@@ -15,7 +15,7 @@ def extract_chunks(
 
 
 def extract_chunks_from_text(
-    text: str, file_id: str, chunk_size: int = 120, overlap: int = 25
+    text: str, file_id: str, chunk_size: int = 600, overlap: int = 50
 ) -> list[dict]:
     return _chunk_text(text, file_id, chunk_size, overlap)
 

@@ -1,4 +1,5 @@
 import json
+from curses import raw
 
 import ollama
 
@@ -11,26 +12,29 @@ _LANG_INSTRUCTION = (
 )
 
 
+def clean_large_text(raw_text: str) -> str:
+    """Етап 1: Очищення великого блоку тексту від PDF-сміття."""
+    prompt = (
+        "You are a professional text editor. Clean the following text from a scanned document.\n\n"
+        "RULES:\n"
+        "1. Remove page numbers, headers, footers, and formatting garbage.\n"
+        "2. Fix broken words and merge fragmented sentences into cohesive text.\n"
+        "3. CRITICAL: DO NOT summarize. Keep 100% of the facts, dates, names, job titles, and details.\n"
+        "4. Return ONLY the cleaned text. NO explanations.\n\n"
+        f"Raw Text:\n{raw_text}" + _LANG_INSTRUCTION
+    )
+    response = ollama.chat(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        options={"num_predict": 4096, "temperature": 0.0},
+    )
+    return response["message"]["content"].strip()
+
+
 def extract_events(chunk: dict) -> list[dict]:
     """Stage 2: extract event cards from one chunk."""
 
-    """
-    prompt = (
-        "You are an expert data extraction assistant.\n"
-        "Extract ALL events, achievements, publications, awards, appointments, projects, or roles from the text.\n\n"
-        "EXTRACTION RULES:\n"
-        "1. 'event': all sentences describing the event.\n"
-        "2. 'date': MUST be a SINGLE 4-digit integer (e.g., 2012). If the text contains a time range (like 2013-2016), extract ONLY the starting year (e.g., 2013). NO strings, NO ranges, NO dashes. If no year is mentioned, use null. event MUST be a COMPLETE, self-contained sentence. DO NOT extract fragments. Always include the subject (the person's name) so the sentence makes sense out of context.\n"
-        "3. 'date_confidence': 'explicit' if a 4-digit year is found, otherwise null.ONLY use null if there is absolutely no year mentioned for that event.\n"
-        "4. IGNORE: Table of contents, headers, footers, page numbers, figure labels, URLs, raw references.\n\n"
-        "OUTPUT FORMAT:\n"
-        "You MUST return ONLY a valid JSON array of objects. NO explanations, NO markdown formatting, NO preamble.\n"
-        "Example:\n"
-        '[{"event": "Published a groundbreaking paper on AI.", "date": 2019, "date_confidence": "explicit"}, '
-        '{"event": "Appointed as lead researcher.", "date": null, "date_confidence": null}]\n\n'
-        f"Text to analyze:\n{chunk['text']}" + _LANG_INSTRUCTION
-    )
-    """
+    cleaned_text = chunk["text"]
 
     prompt = (
         "You are an expert data extraction assistant.\n"
@@ -46,7 +50,7 @@ def extract_events(chunk: dict) -> list[dict]:
         "Example:\n"
         '[{"event": "У 1661 році Ісаак Ньютон успішно закінчив школу в Грентемі та вирушив продовжувати освіту в Кембриджі.", "date": 1661, "date_confidence": "explicit"}, '
         '{"event": "Ісаак Ньютон був прийнятий до Триніті-коледжу Кембриджського університету як студент-субсайзер.", "date": null, "date_confidence": null}]\n\n'
-        f"Text to analyze:\n{chunk['text']}" + _LANG_INSTRUCTION
+        f"Text to analyze:\n{cleaned_text}" + _LANG_INSTRUCTION
     )
 
     response = ollama.chat(
