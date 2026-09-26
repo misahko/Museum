@@ -1,32 +1,40 @@
-from Tools.llm import order_and_describe_bucket
+from Tools.llm import describe_bucket
 
 _MAX_BATCH = 15
 
 
 def _order_cluster(cluster: dict) -> dict:
-    """Stage 5: causally order and describe one cluster via Ollama."""
+    """Stage 5: order cluster by date and describe it via Ollama."""
     events = cluster["events"]
     if not events:
         return {**cluster, "description": "", "events": []}
 
-    ordered_events: list[dict] = []
+    # 1. Алгоритмічне сортування ТІЛЬКИ за датами
+    def sort_key(e):
+        d = e.get("date")
+        # Якщо є конкретний рік - сортуємо за ним. Якщо немає (null/unknown) - ставимо в кінець (9999)
+        return d if isinstance(d, int) else 9999
+
+    ordered_events = sorted(events, key=sort_key)
+
+    # 2. Генерація опису для вже відсортованих подій
     descriptions: list[str] = []
 
-    for start in range(0, len(events), _MAX_BATCH):
-        batch = events[start : start + _MAX_BATCH]
+    for start in range(0, len(ordered_events), _MAX_BATCH):
+        batch = ordered_events[start : start + _MAX_BATCH]
         try:
-            res = order_and_describe_bucket(batch)
-            order = res.get("order") or list(range(len(batch)))
-            ordered_events.extend(batch[i] for i in order if i < len(batch))
-            descriptions.append(res.get("description", ""))
+            # Викликаємо LLM ТІЛЬКИ для опису
+            desc = describe_bucket(batch)
+            if desc:
+                descriptions.append(desc)
         except Exception:
-            ordered_events.extend(batch)
+            pass
 
-    return {**cluster, "description": " ".join(d for d in descriptions if d), "events": ordered_events}
+    return {**cluster, "description": " ".join(descriptions), "events": ordered_events}
 
 
 def run(buckets: dict, progress=None) -> dict:
-    """Stage 5: order and describe every cluster in every year bucket."""
+    """Stage 5: order (by date) and describe every cluster in every year bucket."""
     result = {}
     years = list(buckets.keys())
     total = len(years)
@@ -36,6 +44,10 @@ def run(buckets: dict, progress=None) -> dict:
         if progress:
             pct = 65 + int(23 * yi / max(total, 1))
             progress(6, f"Ordering bucket {yi + 1}/{total}: year {year}", pct)
-        result[year] = {**bucket, "clusters": [_order_cluster(c) for c in bucket["clusters"]]}
+
+        result[year] = {
+            **bucket,
+            "clusters": [_order_cluster(c) for c in bucket["clusters"]],
+        }
 
     return result

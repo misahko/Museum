@@ -20,7 +20,7 @@ def extract_events(chunk: dict) -> list[dict]:
         "Extract ALL events, achievements, publications, awards, appointments, projects, or roles from the text.\n\n"
         "EXTRACTION RULES:\n"
         "1. 'event': all sentences describing the event.\n"
-        "2. 'date': MUST be a SINGLE 4-digit integer (e.g., 2012). If the text contains a time range (like 2013-2016), extract ONLY the starting year (e.g., 2013). NO strings, NO ranges, NO dashes. If no year is mentioned, use null.\n"
+        "2. 'date': MUST be a SINGLE 4-digit integer (e.g., 2012). If the text contains a time range (like 2013-2016), extract ONLY the starting year (e.g., 2013). NO strings, NO ranges, NO dashes. If no year is mentioned, use null. event MUST be a COMPLETE, self-contained sentence. DO NOT extract fragments. Always include the subject (the person's name) so the sentence makes sense out of context.\n"
         "3. 'date_confidence': 'explicit' if a 4-digit year is found, otherwise null.ONLY use null if there is absolutely no year mentioned for that event.\n"
         "4. IGNORE: Table of contents, headers, footers, page numbers, figure labels, URLs, raw references.\n\n"
         "OUTPUT FORMAT:\n"
@@ -36,16 +36,16 @@ def extract_events(chunk: dict) -> list[dict]:
         "You are an expert data extraction assistant.\n"
         "Your task is to extract EVERY SINGLE event, job position, degree, dissertation, and achievement from the text.\n\n"
         "EXTRACTION RULES:\n"
-        "1. BE COMPREHENSIVE: If the text lists 10 jobs, you MUST output 10 separate JSON objects. DO NOT summarize. DO NOT stop after one event.\n"
-        "2. 'event': Write a full sentence describing the specific job, degree, or achievement.\n"
-        "3. 'date': MUST be a SINGLE 4-digit integer (e.g., 2012). If the text contains a time range (like 2013-2016), extract ONLY the starting year (e.g., 2013). NO strings, NO ranges. If no year is mentioned, use null.\n"
+        "1. BE COMPREHENSIVE: Output a separate JSON object for each distinct event.\n"
+        "2. 'event': MUST be a COMPLETE, descriptive sentence with FULL CONTEXT. Always specify WHO the event is about (use the person's name, e.g., 'Ісаак Ньютон', NOT 'він') and WHAT exactly happened. Instead of 'закінчив університет', write 'Ісаак Ньютон закінчив Кембриджський університет'. Explain the context if necessary.\n"
+        "3. 'date': MUST be a SINGLE 4-digit integer (e.g., 2012). If the text contains a time range, extract ONLY the starting year. If no year is mentioned, use null.\n"
         "4. 'date_confidence': 'explicit' if a 4-digit year is found, otherwise null.\n"
         "5. IGNORE: Table of contents, headers, footers.\n\n"
         "OUTPUT FORMAT:\n"
         "You MUST return ONLY a valid JSON array of objects. NO explanations.\n"
         "Example:\n"
-        '[{"event": "Захистив кандидатську дисертацію з математичної кібернетики.", "date": null, "date_confidence": null}, '
-        '{"event": "Працював доцентом факультету кібернетики КНУ.", "date": 2001, "date_confidence": "explicit"}]\n\n'
+        '[{"event": "У 1661 році Ісаак Ньютон успішно закінчив школу в Грентемі та вирушив продовжувати освіту в Кембриджі.", "date": 1661, "date_confidence": "explicit"}, '
+        '{"event": "Ісаак Ньютон був прийнятий до Триніті-коледжу Кембриджського університету як студент-субсайзер.", "date": null, "date_confidence": null}]\n\n'
         f"Text to analyze:\n{chunk['text']}" + _LANG_INSTRUCTION
     )
 
@@ -53,7 +53,7 @@ def extract_events(chunk: dict) -> list[dict]:
         model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         # format="json",
-        options={"num_predict": 8192, "num_ctx": 8192},
+        options={"num_predict": 8192, "num_ctx": 8192, "temperature": 0.0},
     )
 
     content = response["message"]["content"].strip()
@@ -105,31 +105,24 @@ def name_cluster(representative_event: str) -> str:
     return response["message"]["content"].strip()
 
 
-def order_and_describe_bucket(events: list[dict]) -> dict:
-    """Stage 5: causal ordering + one-paragraph description for ≤15 events."""
-    numbered = "\n".join(f"{i}. {e['event']}" for i, e in enumerate(events))
+def describe_bucket(events: list[dict]) -> str:
+    """Stage 5: write a one-sentence description for a group of events."""
+    numbered = "\n".join(f"- {e['event']}" for e in events)
     prompt = (
-        "Analyze the following list of historical events and perform two tasks:\n"
-        "1. Reorder them by cause-and-effect logic (chronological or logical progression).\n"
-        "2. Write a single, cohesive sentsnce describing this thematic group.\n\n"
+        "Analyze the following list of historical events and write a single, cohesive sentence describing this thematic group.\n\n"
         f"Events:\n{numbered}\n\n"
         "OUTPUT FORMAT:\n"
-        "You MUST return ONLY a valid JSON object. NO preamble, NO explanations.\n"
-        'Example format:\n{"order": [2, 0, 1], "description": "This era was characterized by..."}'
+        "Return ONLY the sentence. NO preamble, NO quotes, NO formatting, NO JSON."
         + _LANG_INSTRUCTION
     )
 
     response = ollama.chat(
         model=MODEL,
         messages=[{"role": "user", "content": prompt}],
-        # format="json",  # <--- ГАРАНТУЄ JSON
-        options={"num_predict": 16384},
+        options={"num_predict": 1024},
     )
 
-    content = response["message"]["content"].strip()
-    start = content.find("{")
-    end = content.rfind("}") + 1
-    return json.loads(content[start:end])
+    return response["message"]["content"].strip()
 
 
 def _extract_json_array(text: str) -> list:

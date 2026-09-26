@@ -1,16 +1,22 @@
 import base64
-import pdfplumber
 from pathlib import Path
 
+import pdfplumber
 
-def extract_chunks(file_path: str, chunk_size: int = 300, overlap: int = 50) -> list[dict]:
+
+# Змінюємо chunk_size з 300 на 120, а overlap з 50 на 25
+def extract_chunks(
+    file_path: str, chunk_size: int = 120, overlap: int = 25
+) -> list[dict]:
     path = Path(file_path)
     with pdfplumber.open(file_path) as pdf:
         text = " ".join(page.extract_text() or "" for page in pdf.pages)
     return _chunk_text(text, path.name, chunk_size, overlap)
 
 
-def extract_chunks_from_text(text: str, file_id: str, chunk_size: int = 300, overlap: int = 50) -> list[dict]:
+def extract_chunks_from_text(
+    text: str, file_id: str, chunk_size: int = 120, overlap: int = 25
+) -> list[dict]:
     return _chunk_text(text, file_id, chunk_size, overlap)
 
 
@@ -21,11 +27,13 @@ def _chunk_text(text: str, file_id: str, chunk_size: int, overlap: int) -> list[
     start = 0
     while start < len(words):
         end = min(start + chunk_size, len(words))
-        chunks.append({
-            "file_id": file_id,
-            "chunk_index": chunk_index,
-            "text": " ".join(words[start:end]),
-        })
+        chunks.append(
+            {
+                "file_id": file_id,
+                "chunk_index": chunk_index,
+                "text": " ".join(words[start:end]),
+            }
+        )
         chunk_index += 1
         if end == len(words):
             break
@@ -33,7 +41,9 @@ def _chunk_text(text: str, file_id: str, chunk_size: int, overlap: int) -> list[
     return chunks
 
 
-def extract_images_from_pdf_bytes(data: bytes, file_id: str, min_size: int = 80) -> list[dict]:
+def extract_images_from_pdf_bytes(
+    data: bytes, file_id: str, min_size: int = 80
+) -> list[dict]:
     """
     Extract embedded images from a PDF supplied as raw bytes.
 
@@ -74,13 +84,15 @@ def extract_images_from_pdf_bytes(data: bytes, file_id: str, min_size: int = 80)
             mime = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
             b64 = base64.b64encode(img_info["image"]).decode()
 
-            images.append({
-                "file_id": file_id,
-                "page": page_num + 1,
-                "width": w,
-                "height": h,
-                "data_url": f"data:{mime};base64,{b64}",
-            })
+            images.append(
+                {
+                    "file_id": file_id,
+                    "page": page_num + 1,
+                    "width": w,
+                    "height": h,
+                    "data_url": f"data:{mime};base64,{b64}",
+                }
+            )
 
     doc.close()
     return images
